@@ -559,8 +559,9 @@ fi
         {
                # Fill 2 tables with the OH and the version from "crsctl stat res -p -w "TYPE = ora.database.type""
                if ($1 == "NAME")
-               {        
+               {
                         sub("^ora.", "", $2)                                                                    ;
+                        sub(/\(.*$/, "", $2)                                                                    ;       # Remove the consumer group
                         type = "TECH"                                                                           ;
                         if ($2 ~ ".db$")
                         {
@@ -594,11 +595,11 @@ fi
                                         # We put the type before the name to sort it by type easily later
                                         type_name = temp[length(temp)]"."$2                                     ;
                                         tab_tech[$2] = type_name                                                ;
-                                        if (length(type_name) > COL_VER-1)
-                                        {     COL_VER = length($2) + 1                                  ;
+                                        if (length($2) > COL_VER-1)
+                                        {     COL_VER = length($2) + 1                                          ;
                                         }
                                 } else {
-                                        #tab_tech[temp[1]] = temp[1]"."temp[1]                                  ; 
+                                        #tab_tech[temp[1]] = temp[1]"."temp[1]                                  ;
                                         tab_tech[temp[1]] = temp[1]                                             ;
                                 }
                         }
@@ -791,8 +792,8 @@ fi
                                         the_name = tech_sorted[i]                                               ;
                                         sub(/\..*$/, "", the_type)                                              ;
                                         sub(/^[[:alnum:]]*\./, "", the_name)
-                                        printf(COLOR_BEGIN WHITE " %-"COL_DB-1"s" COLOR_END"|", the_type, WHITE);  
-                                        printf(COLOR_BEGIN WHITE " %-"COL_VER"s" COLOR_END"|", the_name, WHITE) ;  
+                                        printf(COLOR_BEGIN WHITE " %-"COL_DB-1"s" COLOR_END"|", the_type, WHITE);
+                                        printf(COLOR_BEGIN WHITE " %-"COL_VER"s" COLOR_END"|", the_name, WHITE) ;
                                         if (the_name == the_type)
                                         {       a = the_type                                                    ;
                                         } else {
@@ -835,8 +836,8 @@ fi
                                                         {       printf("%s", center(DISABLED,           COL_NODE, RED, COL_SEP ))      ;
                                                         } else {
                                                                 if (toupper(tech_status) == "ONLINE")
-                                                                {       printf("%"left"s%s %s%"right-1"s", "", in_color(nice_case(tech_status), COL_ONLINE), in_color(DISABLED, RED),COL_SEP);
-                                                                } else { printf("%"left"s%s %s%"right-1"s", "", in_color(nice_case(tech_status), COL_OTHER ), in_color(DISABLED, RED),COL_SEP);
+                                                                {       printf("%"left-1"s%s %s%"right-1"s", "", in_color(nice_case(tech_status), COL_ONLINE), in_color(DISABLED, RED),COL_SEP);
+                                                                } else { printf("%"left-1"s%s %s%"right-1"s", "", in_color(nice_case(tech_status), COL_OTHER ), in_color(DISABLED, RED),COL_SEP);
                                                                 }
                                                         }
                                                 }
@@ -909,8 +910,8 @@ fi
                                                         left  = COL_NODE - length(dbstatus) - right             ;
 
                                                         if (dbstatus == "")             {printf("%s", center(DISABLED,           COL_NODE, RED, COL_SEP ))      ;} else
-                                                        if (dbstatus == "ONLINE")       {printf("%"left"s%s %s%"right-1"s", "", in_color(nice_case(dbstatus), COL_ONLINE), in_color(DISABLED, RED), COL_SEP);}
-                                                        else                            {printf("%"left"s%s %s%"right-1"s", "", in_color(nice_case(dbstatus), COL_OTHER ), in_color(DISABLED, RED), COL_SEP);}
+                                                        if (dbstatus == "ONLINE")       {printf("%"left-1"s%s %s%"right-1"s", "", in_color(nice_case(dbstatus), COL_ONLINE), in_color(DISABLED, RED), COL_SEP);}
+                                                        else                            {printf("%"left-1"s%s %s%"right-1"s", "", in_color(nice_case(dbstatus), COL_OTHER ), in_color(DISABLED, RED), COL_SEP);}
                                                 } else {
                                                         if (dbstatus == "")             {printf("%s", center(UNKNOWN,             COL_NODE, COL_DEFAULT, COL_SEP    ))      ;}      else
                                                         if (dbstatus == "ONLINE")       {printf("%s", center(nice_case(dbstatus), COL_NODE, COL_ONLINE,  COL_SEP    ))      ;}
@@ -996,8 +997,8 @@ fi
                                                         left  = COL_NODE - length(dbstatus) - right             ;
 
                                                         if (dbstatus == "")             {printf("%s", center(DISABLED, COL_NODE, RED, COL_SEP ))      ;} else
-                                                        if (dbstatus == "ONLINE")       {printf("%"left"s%s %s%"right-1"s", "", in_color(nice_case(dbstatus), COL_ONLINE), in_color(DISABLED, RED), COL_SEP);}
-                                                        else                            {printf("%"left"s%s %s%"right-1"s", "", in_color(nice_case(dbstatus), COL_OTHER ), in_color(DISABLED, RED), COL_SEP);}
+                                                        if (dbstatus == "ONLINE")       {printf("%"left-1"s%s %s%"right-1"s", "", in_color(nice_case(dbstatus), COL_ONLINE), in_color(DISABLED, RED), COL_SEP);}
+                                                        else                            {printf("%"left-1"s%s %s%"right-1"s", "", in_color(nice_case(dbstatus), COL_OTHER ), in_color(DISABLED, RED), COL_SEP);}
                                                 } else {
                                                         if (dbstatus == "")             {printf("%s", center(UNKNOWN,             COL_NODE, COL_DEFAULT, COL_SEP   ))      ;} else
                                                         if (dbstatus == "ONLINE")       {printf("%s", center(nice_case(dbstatus), COL_NODE, COL_ONLINE,  COL_SEP   ))      ;}
@@ -1077,10 +1078,10 @@ fi
                                                         left  = COL_NODE - length(dbdetail) - right             ;
 
                                                         if (dbdetail == "")             {printf("%s",                           center(DISABLED, COL_NODE, RED, COL_SEP ))                                    ;} else
-                                                        if (dbdetail == "Open")         {printf("%"left"s%s %s%"right-1"s", "", in_color(nice_case(dbdetail), COL_ONLINE),   in_color(DISABLED, RED), COL_SEP);} else
-                                                        if (dbdetail ~  /Readonly/)     {printf("%"left"s%s %s%"right-1"s", "", in_color(nice_case(dbdetail), COL_READONLY), in_color(DISABLED, RED), COL_SEP);} else
-                                                        if (dbdetail ~  /Shut/)         {printf("%"left"s%s %s%"right-1"s", "", in_color(nice_case(dbdetail), COL_SHUT),     in_color(DISABLED, RED), COL_SEP);} else
-                                                                                        {printf("%"left"s%s %s%"right-1"s", "", in_color(nice_case(dbdetail), COL_OTHER),    in_color(DISABLED, RED), COL_SEP);}
+                                                        if (dbdetail == "Open")         {printf("%"left-1"s%s %s%"right-1"s", "", in_color(nice_case(dbdetail), COL_ONLINE),   in_color(DISABLED, RED), COL_SEP);} else
+                                                        if (dbdetail ~  /Readonly/)     {printf("%"left-1"s%s %s%"right-1"s", "", in_color(nice_case(dbdetail), COL_READONLY), in_color(DISABLED, RED), COL_SEP);} else
+                                                        if (dbdetail ~  /Shut/)         {printf("%"left-1"s%s %s%"right-1"s", "", in_color(nice_case(dbdetail), COL_SHUT),     in_color(DISABLED, RED), COL_SEP);} else
+                                                                                        {printf("%"left-1"s%s %s%"right-1"s", "", in_color(nice_case(dbdetail), COL_OTHER),    in_color(DISABLED, RED), COL_SEP);}
 
                                                 } else {
                                                         if (dbdetail == "")             {printf("%s", center(UNKNOWN,             COL_NODE, COL_DEFAULT, COL_SEP ))  ;}      else
@@ -1139,7 +1140,7 @@ fi
                         printf ("\n")                                                                           ;
                         print_legend_disabled(INSTANCE_DISABLED, "Instance")                                    ;
                         print_legend_recent_restarted()                                                         ;
-                        print_legend_status_issue()                                                             ; 
+                        print_legend_status_issue()                                                             ;
         } ' $TMP | ${AWK} -v GREP="$GREP" -v UNGREP="$UNGREP" ' BEGIN {FS="|"}                                              # AWK used to grep and ungrep
                       {         if ((NF >= 3) && ($(NF-1) !~ /Type/) && ($2 !~ /Service/))
                                 {       if (($0 ~ GREP) && ($0 !~ UNGREP))
