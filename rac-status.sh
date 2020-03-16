@@ -757,7 +757,7 @@ fi
                                                                                 if ($0 ~  /Mount/)              {  status_details[DB,SERVER] = "Mounted"        ;       } else
                                                                                 if ($0 ~  /running from old/)   {  status_details[DB,SERVER] = "Open from old OH";      } else
                                                                                                                 {  status_details[DB,SERVER] = $0               ;       }
-                                                                                if (length(status_details[DB,SERVER]) > COL_NODE)
+                                                                                if ((length(status_details[DB,SERVER]) > COL_NODE) && (type != "TECH"))
                                                                                 {       COL_NODE = length(status_details[DB,SERVER]) + COL_NODE_OFFSET  ;
                                                                                 }
                                                                         }
