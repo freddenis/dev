@@ -832,6 +832,7 @@ fi
                                                 {
                                                         right = int((COL_NODE - length(tech_status)) / 2)       ;
                                                         left  = COL_NODE - length(tech_status) - right          ;
+                                                        #print "ici"length(tech_status)":"COL_NODE":"left":"right      ;
                                                         if (length(tech_status) < COL_DB+4)
                                                         {       left--                                          ;
                                                         }
@@ -839,8 +840,8 @@ fi
                                                         {       printf("%s", center(DISABLED,           COL_NODE, RED, COL_SEP ))      ;
                                                         } else {
                                                                 if (toupper(tech_status) == "ONLINE")
-                                                                {       printf("%"left"s%s %s%"right-1"s", "", in_color(nice_case(tech_status), COL_ONLINE), in_color(DISABLED, RED),COL_SEP);
-                                                                } else { printf("%"left"s%s %s%"right-1"s", "", in_color(nice_case(tech_status), COL_OTHER ), in_color(DISABLED, RED),COL_SEP);
+                                                                {       printf("%"left"s%s %s%"right"s", "", in_color(nice_case(tech_status), COL_ONLINE), in_color(DISABLED, RED),COL_SEP);
+                                                                } else { printf("%"left"s%s %s%"right"s", "", in_color(nice_case(tech_status), COL_OTHER ), in_color(DISABLED, RED),COL_SEP);
                                                                 }
                                                         }
                                                 }
@@ -911,10 +912,12 @@ fi
                                                         LISTENER_DISABLED = 1                                   ;
                                                         right = int((COL_NODE - length(dbstatus)) / 2)          ;
                                                         left  = COL_NODE - length(dbstatus) - right             ;
-
+                                                        if (length(dbstatus) < COL_DB+4)
+                                                        {       left--                                          ;
+                                                        }
                                                         if (dbstatus == "")             {printf("%s", center(DISABLED,           COL_NODE, RED, COL_SEP ))      ;} else
-                                                        if (dbstatus == "ONLINE")       {printf("%"left-1"s%s %s%"right-1"s", "", in_color(nice_case(dbstatus), COL_ONLINE), in_color(DISABLED, RED), COL_SEP);}
-                                                        else                            {printf("%"left-1"s%s %s%"right-1"s", "", in_color(nice_case(dbstatus), COL_OTHER ), in_color(DISABLED, RED), COL_SEP);}
+                                                        if (dbstatus == "ONLINE")       {printf("%"left"s%s %s%"right"s", "", in_color(nice_case(dbstatus), COL_ONLINE), in_color(DISABLED, RED), COL_SEP);}
+                                                        else                            {printf("%"left"s%s %s%"right"s", "", in_color(nice_case(dbstatus), COL_OTHER ), in_color(DISABLED, RED), COL_SEP);}
                                                 } else {
                                                         if (dbstatus == "")             {printf("%s", center(UNKNOWN,             COL_NODE, COL_DEFAULT, COL_SEP    ))      ;}      else
                                                         if (dbstatus == "ONLINE")       {printf("%s", center(nice_case(dbstatus), COL_NODE, COL_ONLINE,  COL_SEP    ))      ;}
@@ -998,10 +1001,12 @@ fi
                                                         SERVICE_DISABLED = 1                                    ;
                                                         right = int((COL_NODE - length(dbstatus)) / 2)          ;
                                                         left  = COL_NODE - length(dbstatus) - right             ;
-
+                                                        if (length(dbstatus) < COL_DB+4)
+                                                        {       left--                                          ;
+                                                        }
                                                         if (dbstatus == "")             {printf("%s", center(DISABLED, COL_NODE, RED, COL_SEP ))      ;} else
-                                                        if (dbstatus == "ONLINE")       {printf("%"left-1"s%s %s%"right-1"s", "", in_color(nice_case(dbstatus), COL_ONLINE), in_color(DISABLED, RED), COL_SEP);}
-                                                        else                            {printf("%"left-1"s%s %s%"right-1"s", "", in_color(nice_case(dbstatus), COL_OTHER ), in_color(DISABLED, RED), COL_SEP);}
+                                                        if (dbstatus == "ONLINE")       {printf("%"left"s%s %s%"right"s", "", in_color(nice_case(dbstatus), COL_ONLINE), in_color(DISABLED, RED), COL_SEP);}
+                                                        else                            {printf("%"left"s%s %s%"right"s", "", in_color(nice_case(dbstatus), COL_OTHER ), in_color(DISABLED, RED), COL_SEP);}
                                                 } else {
                                                         if (dbstatus == "")             {printf("%s", center(UNKNOWN,             COL_NODE, COL_DEFAULT, COL_SEP   ))      ;} else
                                                         if (dbstatus == "ONLINE")       {printf("%s", center(nice_case(dbstatus), COL_NODE, COL_ONLINE,  COL_SEP   ))      ;}
@@ -1079,12 +1084,15 @@ fi
                                                         INSTANCE_DISABLED = 1                                   ;
                                                         right = int((COL_NODE - length(dbdetail)) / 2)          ;
                                                         left  = COL_NODE - length(dbdetail) - right             ;
+                                                        if (length(dbdetail) < COL_DB+4)
+                                                        {       left--                                          ;
+                                                        }
 
                                                         if (dbdetail == "")             {printf("%s",                           center(DISABLED, COL_NODE, RED, COL_SEP ))                                    ;} else
-                                                        if (dbdetail == "Open")         {printf("%"left-1"s%s %s%"right-1"s", "", in_color(nice_case(dbdetail), COL_ONLINE),   in_color(DISABLED, RED), COL_SEP);} else
-                                                        if (dbdetail ~  /Readonly/)     {printf("%"left-1"s%s %s%"right-1"s", "", in_color(nice_case(dbdetail), COL_READONLY), in_color(DISABLED, RED), COL_SEP);} else
-                                                        if (dbdetail ~  /Shut/)         {printf("%"left-1"s%s %s%"right-1"s", "", in_color(nice_case(dbdetail), COL_SHUT),     in_color(DISABLED, RED), COL_SEP);} else
-                                                                                        {printf("%"left-1"s%s %s%"right-1"s", "", in_color(nice_case(dbdetail), COL_OTHER),    in_color(DISABLED, RED), COL_SEP);}
+                                                        if (dbdetail == "Open")         {printf("%"left"s%s %s%"right"s", "", in_color(nice_case(dbdetail), COL_ONLINE),   in_color(DISABLED, RED), COL_SEP);} else
+                                                        if (dbdetail ~  /Readonly/)     {printf("%"left"s%s %s%"right"s", "", in_color(nice_case(dbdetail), COL_READONLY), in_color(DISABLED, RED), COL_SEP);} else
+                                                        if (dbdetail ~  /Shut/)         {printf("%"left"s%s %s%"right"s", "", in_color(nice_case(dbdetail), COL_SHUT),     in_color(DISABLED, RED), COL_SEP);} else
+                                                                                        {printf("%"left"s%s %s%"right"s", "", in_color(nice_case(dbdetail), COL_OTHER),    in_color(DISABLED, RED), COL_SEP);}
 
                                                 } else {
                                                         if (dbdetail == "")             {printf("%s", center(UNKNOWN,             COL_NODE, COL_DEFAULT, COL_SEP ))  ;}      else
