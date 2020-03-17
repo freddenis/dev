@@ -830,14 +830,17 @@ fi
                                                         }
                                                 } else                                                                  # Resource is disabled
                                                 {
-                                                        right = int((COL_NODE - length(tech_status)) / 2)          ;
-                                                        left  = COL_NODE - length(tech_status) - right             ;
+                                                        right = int((COL_NODE - length(tech_status)) / 2)       ;
+                                                        left  = COL_NODE - length(tech_status) - right          ;
+                                                        if (length(tech_status) < COL_DB+4)
+                                                        {       left--                                          ;
+                                                        }
                                                         if (tech_status == "")
                                                         {       printf("%s", center(DISABLED,           COL_NODE, RED, COL_SEP ))      ;
                                                         } else {
                                                                 if (toupper(tech_status) == "ONLINE")
-                                                                {       printf("%"left-1"s%s %s%"right-1"s", "", in_color(nice_case(tech_status), COL_ONLINE), in_color(DISABLED, RED),COL_SEP);
-                                                                } else { printf("%"left-1"s%s %s%"right-1"s", "", in_color(nice_case(tech_status), COL_OTHER ), in_color(DISABLED, RED),COL_SEP);
+                                                                {       printf("%"left"s%s %s%"right-1"s", "", in_color(nice_case(tech_status), COL_ONLINE), in_color(DISABLED, RED),COL_SEP);
+                                                                } else { printf("%"left"s%s %s%"right-1"s", "", in_color(nice_case(tech_status), COL_OTHER ), in_color(DISABLED, RED),COL_SEP);
                                                                 }
                                                         }
                                                 }
