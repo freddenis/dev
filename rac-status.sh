@@ -8,11 +8,12 @@
 # Please have a look at http://bit.ly/2MFkzDw  for some details and screenshots
 # The latest version of the script can be downloaded here : http://bit.ly/2XEXa6j
 #
-# The current script version is 20190906
+# The current script version is 20200305
 #
 # History :
 #
 # 20200305 - Fred Denis - Fixed a bug when the hostname contains twice the cluster name
+#                         Also provide insights to the user if we cannot find an ASM entry in oratab as oraenv wont work
 # 20190906 - Fred Denis - A new -V option to show the version of the script
 # 20190830 - Fred Denis - Show a red "x" also when instances and listeners are disabled
 # 20190829 - Fred Denis - Show a red "x" if a service is disabled as well as a legend below the services table
@@ -111,19 +112,23 @@ COL_NODE_OFFSET=99
 OS=`uname`
 case ${OS} in
         SunOS)
-                           AWK=`which gawk`                         ;
-                           SED=`which gsed`                         ;;
+                ORATAB="/var/opt/oracle/oratab"                 ;
+                   AWK=`which gawk`                             ;
+                   SED=`which gsed`                             ;;
         Linux)
-                           AWK=`which awk`                          ;
-                           SED=`which sed`                          ;;
+                ORATAB="/etc/oratab"                            ;
+                   AWK=`which awk`                              ;
+                   SED=`which sed`                              ;;
         HP-UX)
-                           AWK=`which awk`                          ;
-                           SED=`which sed`                          ;;
+                ORATAB="/etc/oratab"                            ;
+                   AWK=`which awk`                              ;
+                   SED=`which sed`                              ;;
         AIX)
-                           AWK=`which gawk`                         ;
-                           SED=`which sed`                          ;;
-        *)                 printf "\n\t\033[1;31m%s\033[m\n\n" "Unsupported OS, cannot continue."           ;
-                           exit 666                            ;;
+                ORATAB="/etc/oratab"                            ;
+                   AWK=`which gawk`                             ;
+                   SED=`which sed`                              ;;
+        *)         printf "\n\t\033[1;31m%s\033[m\n\n" "Unsupported OS, cannot continue."           ;
+                   exit 666                                     ;;
 esac
 # Check if we have an AWK and a SED to continue
 if [[ ! -f ${AWK} ]]
@@ -189,7 +194,7 @@ cat << END
         -d        Revert the behavior defined by SHOW_DB  ; if SHOW_DB   is set to YES to show the databases by default, then the -d option will hide the databases
         -l        Revert the behavior defined by SHOW_LSNR; if SHOW_LSNR is set to YES to show the listeners by default, then the -l option will hide the listeners
         -s        Revert the behavior defined by SHOW_SVC ; if SHOW_SVC  is set to YES to show the services  by default, then the -s option will hide the services
-        -t        Revert the behavior defined by SHOW_TECH; if SHOW_TECH is set to YES to show the services  by default, then the -t option will hide the services
+        -t        Revert the behavior defined by SHOW_TECH; if SHOW_TECH is set to YES to show the tech resources  by default, then the -t option will hide the tech resources
 
         -g        Act as a grep command to grep a pattern from the output (key sensitive)
         -v        Act as "grep -v" to ungrep from the output
@@ -318,7 +323,19 @@ then
                 # Set the ASM env to be able to use crsctl commands
                 #
                 ORACLE_SID=`ps -ef | grep pmon | grep asm | ${AWK} '{print $NF}' | sed s'/asm_pmon_//' | egrep "^[+]"`
-
+                #
+                # If oratab exists, we check if there is an ASM entry trying to know if oraenv will work -- if we cannot find an ASM entry
+                # in oratab, we try to point the user in the right direction to fix it
+                #
+                if [[ -f "${ORATAB}" ]]
+                then
+                        grep ^${ORACLE_SID} ${ORATAB} > /dev/null 2>&1
+                        if [ $? -ne 0 ]
+                        then
+                                printf "\n\t\033[1;31m%s\033[m\n\n" "Cannot find an entry for ${ORACLE_SID} in ${ORATAB}. You can consider using the -e option or you may suffer from https://unknowndba.blogspot.com/2019/01/lost-entries-in-oratab-after-gi-122.html ; cannot continue at this point."
+                                exit 888
+                        fi
+                fi
                 export ORAENV_ASK=NO
                 . oraenv > /dev/null 2>&1
         fi
@@ -710,12 +727,8 @@ fi
                                 if (type == "TECH")
                                 {       while (getline)
                                         {       if ($1 == "ENABLED")
-                                                {       #print "ici"DB"|"$2 ;
-                                                        for (i=1; i<=n; i++)                                            # n = number of nodes
+                                                {       for (i=1; i<=n; i++)                                            # n = number of nodes
                                                         {       is_enabled[DB,nodes[i]]= $2                     ;
-                                                        #       print "db" DB                                   ;
-                                                        #       print "n" nodes[i]                              ;
-                                                        #       print "dol 2" $2                                ;
                                                         }
                                                         while(getline)
                                                         {       if ($1 ~ /ENABLED@SERVERNAME/ )
@@ -832,7 +845,6 @@ fi
                                                 {
                                                         right = int((COL_NODE - length(tech_status)) / 2)       ;
                                                         left  = COL_NODE - length(tech_status) - right          ;
-                                                        #print "ici"length(tech_status)":"COL_NODE":"left":"right      ;
                                                         if (length(tech_status) < COL_DB+4)
                                                         {       left--                                          ;
                                                         }
