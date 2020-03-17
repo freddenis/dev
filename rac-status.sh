@@ -762,6 +762,9 @@ fi
                                         if ($1 == "TARGET")             {       target[DB,SERVER]=$2                    ;}
                                         if ($1 == "LAST_RESTART")       {       started[DB,SERVER]=diff_hours($2" "$3)  ;}
                                         if ($1 == "STATE_DETAILS")      {       NB++                                    ;       # Number of instances we came through
+                                                                                if (DB ~ /acfs/)
+                                                                                {       acfs_mount[DB] = $2             ;
+                                                                                }
                                                                                 sub("STATE_DETAILS=", "", $0)           ;
                                                                                 sub(",HOME=.*$", "", $0)                ;       # Manage the 12cR2 new feature, check 20170606 for more details
                                                                                 sub("),.*$", ")", $0)                   ;       # To make clear multi status like "Mounted (Closed),Readonly,Open Initiated"
@@ -800,8 +803,7 @@ fi
                                 # Sort by type
                                 y = asort(tab_tech, tech_sorted)                                                ;
                                 for (i = 1; i<=y; i++)
-                                {       #print tech_sorted[i]                                                   ;
-                                        the_type = tech_sorted[i]                                               ;
+                                {       the_type = tech_sorted[i]                                               ;
                                         the_name = tech_sorted[i]                                               ;
                                         sub(/\..*$/, "", the_type)                                              ;
                                         sub(/^[[:alnum:]]*\./, "", the_name)
@@ -813,7 +815,11 @@ fi
                                                 a = the_name"."the_type                                         ;
                                         }
                                         for (j = 1; j <= n; j++)                        # For each node
-                                        {       tech_enabled = is_enabled[a, nodes[j]]                          ;
+                                        {       if (is_enabled[a, nodes[j]] == "")
+                                                { tech_enabled = 1                                              ;
+                                                } else {
+                                                 tech_enabled = is_enabled[a, nodes[j]]                         ;
+                                                }
                                                  tech_status = status[a, nodes[j]]                              ;
                                                  tech_target = target[a, nodes[j]]                              ;
                                                 if (tech_status == "")
@@ -857,6 +863,9 @@ fi
                                                                 }
                                                         }
                                                 }
+                                        }
+                                        if (acfs_mount[the_name"."the_type])
+                                        {       printf("  %s", acfs_mount[the_name"."the_type])                 ;
                                         }
                                         printf("\n")                                                            ;
                                 }
