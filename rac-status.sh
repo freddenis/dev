@@ -1115,7 +1115,7 @@ fi
                                                            COL_OTHER=WITH_BACK2                                 ;
                                                         STATUS_ISSUE=1                                          ;
                                                 }
-                                                if (is_enabled[version_sorted[j],nodes[i]] == 0)                            # Instance disabled
+                                                if ((is_enabled[version_sorted[j],nodes[i]] == 0) && (is_enabled[version_sorted[j],nodes[i]] != ""))                            # Instance disabled
                                                 {
                                                         INSTANCE_DISABLED = 1                                   ;
                                                         right = int((COL_NODE - length(dbdetail)) / 2)          ;
