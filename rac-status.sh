@@ -112,59 +112,59 @@ COL_NODE_OFFSET=99
 #
 OS=`uname`
 case ${OS} in
-        SunOS)
-                ORATAB="/var/opt/oracle/oratab"                 ;
-                   AWK=`which gawk`                             ;
-                   SED=`which gsed`                             ;;
-        Linux)
-                ORATAB="/etc/oratab"                            ;
-                   AWK=`which awk`                              ;
-                   SED=`which sed`                              ;;
-        HP-UX)
-                ORATAB="/etc/oratab"                            ;
-                   AWK=`which awk`                              ;
-                   SED=`which sed`                              ;;
-        AIX)
-                ORATAB="/etc/oratab"                            ;
-                   AWK=`which gawk`                             ;
-                   SED=`which sed`                              ;;
-        *)         printf "\n\t\033[1;31m%s\033[m\n\n" "Unsupported OS, cannot continue."           ;
-                   exit 666                                     ;;
+    SunOS)
+        ORATAB="/var/opt/oracle/oratab"                 ;
+           AWK=`which gawk`                             ;
+           SED=`which gsed`                             ;;
+    Linux)
+        ORATAB="/etc/oratab"                            ;
+           AWK=`which awk`                              ;
+           SED=`which sed`                              ;;
+     HP-UX)
+        ORATAB="/etc/oratab"                            ;
+           AWK=`which awk`                              ;
+           SED=`which sed`                              ;;
+     AIX)
+        ORATAB="/etc/oratab"                            ;
+           AWK=`which gawk`                             ;
+           SED=`which sed`                              ;;
+       *)  printf "\n\t\033[1;31m%s\033[m\n\n" "Unsupported OS, cannot continue."           ;
+           exit 666                                     ;;
 esac
 # Check if we have an AWK and a SED to continue
 if [[ ! -f ${AWK} ]]; then
-  printf "\n\t\033[1;31m%s" "No awk found on your system, cannot continue, if you run Solaris, please ensure that gawk is in your path"
-  printf "\t%s\033[m\n\n" ${AWK}
-  exit 678
+    printf "\n\t\033[1;31m%s" "No awk found on your system, cannot continue, if you run Solaris, please ensure that gawk is in your path"
+    printf "\t%s\033[m\n\n" ${AWK}
+    exit 678
 fi
 if [[ ! -f ${SED} ]]; then
-  printf "\n\t\033[1;31m%s" "No sed found on your system, cannot continue, if you run Solaris, please ensure that gsed is in your path"
-  printf "\t%s\033[m\n\n" ${SED}
-  exit 679
+    printf "\n\t\033[1;31m%s" "No sed found on your system, cannot continue, if you run Solaris, please ensure that gsed is in your path"
+    printf "\t%s\033[m\n\n" ${SED}
+    exit 679
 fi
 #
 # Show the version of the script (-V)
 #
 show_version() {
-  VERSION=`${AWK} '{if ($0 ~ /^# 20[0-9][0-9][0-1][0-9]/) {print $2; exit}}' $0`
-  printf "\n\t\033[1;36m%s\033[m\n" "The current version of "`basename $0`" is "$VERSION"."          ;
+    VERSION=`${AWK} '{if ($0 ~ /^# 20[0-9][0-9][0-1][0-9]/) {print $2; exit}}' $0`
+    printf "\n\t\033[1;36m%s\033[m\n" "The current version of "`basename $0`" is "$VERSION"."          ;
 }
 #
 # An usage function
 #
 usage() {
-printf "\n\033[1;37m%-8s\033[m\n" "NAME"                ;
-cat << END
+    printf "\n\033[1;37m%-8s\033[m\n" "NAME"                ;
+    cat << END
         `basename $0` - A nice overview of databases, listeners and services running across a GI 12c
 END
 
-printf "\n\033[1;37m%-8s\033[m\n" "SYNOPSIS"            ;
-cat << END
+    printf "\n\033[1;37m%-8s\033[m\n" "SYNOPSIS"            ;
+    cat << END
         $0 [-a] [-n] [-d] [-l] [-s] [-o] [-f] [-r] [-u] [-h]
 END
 
-printf "\n\033[1;37m%-8s\033[m\n" "DESCRIPTION"         ;
-cat << END
+    printf "\n\033[1;37m%-8s\033[m\n" "DESCRIPTION"         ;
+    cat << END
         `basename $0` needs to be executed with a user allowed to query GI using crsctl; oraenv also has to be working
         `basename $0` will show what is running or not running accross all the nodes of a GI 12c :
                 - The databases instances (and the ORACLE_HOME they are running against)
@@ -180,8 +180,8 @@ cat << END
 
 END
 
-printf "\n\033[1;37m%-8s\033[m\n" "OPTIONS"             ;
-cat << END
+    printf "\n\033[1;37m%-8s\033[m\n" "OPTIONS"             ;
+    cat << END
         -a        Show everything regardless of the default behavior defined with SHOW_DB, SHOW_LSNR, SHOW_SVC and SHOW_TECH
         -n        Show nothing  regardless of the default behavior defined with SHOW_DB, SHOW_LSNR, SHOW_SVC and SHOW_TECH
         -a and -n are handy to erase the defaults values:
@@ -238,27 +238,27 @@ exit 123
 
 # Options
 while getopts "andslLhg:v:o:f:eruw:c:tV" OPT; do
-  case ${OPT} in
-  a)         SHOW_DB="YES"        ; SHOW_LSNR="YES"       ; SHOW_SVC="YES";       SHOW_TECH="YES" ;;
-  n)         SHOW_DB="NO"         ; SHOW_LSNR="NO"        ; SHOW_SVC="NO" ;       SHOW_TECH="NO"  ;;
-  d)         if [ "$SHOW_DB"   = "YES" ]; then   SHOW_DB="NO"; else   SHOW_DB="YES"; fi   ;;
-  s)         if [ "$SHOW_SVC"  = "YES" ]; then  SHOW_SVC="NO"; else  SHOW_SVC="YES"; fi   ;;
-  l)         if [ "$SHOW_LSNR" = "YES" ]; then SHOW_LSNR="NO"; else SHOW_LSNR="YES"; fi   ;;
-  t)         if [ "$SHOW_TECH" = "YES" ]; then SHOW_TECH="NO"; else SHOW_TECH="YES"; fi   ;;
-  L)     LONG_NAMES="YES"                                                                 ;;
-  g)           GREP=${OPTARG}                                                             ;;
-  c)        SORT_BY=${OPTARG}                                                             ;;
-  v)         UNGREP=${OPTARG}                                                             ;;
-  f)           FILE=${OPTARG}                                                             ;;
-  o)            OUT=${OPTARG}                                                             ;;
-  e)     USE_ORAENV="NO"                                                                  ;;
-  r)        REVERSE="YES"                                                                 ;;
-  w)     DIFF_HOURS=${OPTARG}                                                             ;;
-  u)    WITH_COLORS="NO"                                                                  ;;
-  V)      show_version; exit 567                                                          ;;
-  h)         usage                                                                        ;;
-  \?)        echo "Invalid option: -$OPTARG" >&2; usage                                   ;;
-  esac
+    case ${OPT} in
+    a)         SHOW_DB="YES"        ; SHOW_LSNR="YES"       ; SHOW_SVC="YES";       SHOW_TECH="YES" ;;
+    n)         SHOW_DB="NO"         ; SHOW_LSNR="NO"        ; SHOW_SVC="NO" ;       SHOW_TECH="NO"  ;;
+    d)         if [ "$SHOW_DB"   = "YES" ]; then   SHOW_DB="NO"; else   SHOW_DB="YES"; fi   ;;
+    s)         if [ "$SHOW_SVC"  = "YES" ]; then  SHOW_SVC="NO"; else  SHOW_SVC="YES"; fi   ;;
+    l)         if [ "$SHOW_LSNR" = "YES" ]; then SHOW_LSNR="NO"; else SHOW_LSNR="YES"; fi   ;;
+    t)         if [ "$SHOW_TECH" = "YES" ]; then SHOW_TECH="NO"; else SHOW_TECH="YES"; fi   ;;
+    L)     LONG_NAMES="YES"                                                                 ;;
+    g)           GREP=${OPTARG}                                                             ;;
+    c)        SORT_BY=${OPTARG}                                                             ;;
+    v)         UNGREP=${OPTARG}                                                             ;;
+    f)           FILE=${OPTARG}                                                             ;;
+    o)            OUT=${OPTARG}                                                             ;;
+    e)     USE_ORAENV="NO"                                                                  ;;
+    r)        REVERSE="YES"                                                                 ;;
+    w)     DIFF_HOURS=${OPTARG}                                                             ;;
+    u)    WITH_COLORS="NO"                                                                  ;;
+    V)      show_version; exit 567                                                          ;;
+    h)         usage                                                                        ;;
+    \?)        echo "Invalid option: -$OPTARG" >&2; usage                                   ;;
+    esac
 done
 
 
@@ -268,27 +268,27 @@ done
 DIFF_HOURS_UNIT=${DIFF_HOURS: -1}
 
 if [[ ! "${DIFF_HOURS_UNIT}" =~ [0-9] ]]; then
-  HOURS=`echo ${DIFF_HOURS} | sed s'/.$//'`
+    HOURS=`echo ${DIFF_HOURS} | sed s'/.$//'`
 
-  case ${DIFF_HOURS_UNIT} in
-  h)  NB_HOURS=1                                                                      ;;
-  d)  NB_HOURS=24                                                                     ;;
-  w)  NB_HOURS=$((24*7))                                                              ;;
-  m)  NB_HOURS=$((24*7*31))                                                           ;;
-  y)  NB_HOURS=$((24*7*31*365))                                                       ;;
-  esac
+    case ${DIFF_HOURS_UNIT} in
+    h)  NB_HOURS=1                                                                      ;;
+    d)  NB_HOURS=24                                                                     ;;
+    w)  NB_HOURS=$((24*7))                                                              ;;
+    m)  NB_HOURS=$((24*7*31))                                                           ;;
+    y)  NB_HOURS=$((24*7*31*365))                                                       ;;
+    esac
 
-  DIFF_HOURS=$(($HOURS * $NB_HOURS))
+    DIFF_HOURS=$(($HOURS * $NB_HOURS))
 else
-  DIFF_HOURS_UNIT="h"
-            HOURS=${DIFF_HOURS}
+    DIFF_HOURS_UNIT="h"
+              HOURS=${DIFF_HOURS}
 fi
 
 #
 # If we dont show the DB we dont need to sort
 #
 if [ "$SHOW_DB" = "NO" ]; then
-  SORT_BY=""
+    SORT_BY=""
 fi
 
 
@@ -296,117 +296,116 @@ fi
 # Check that the input file is here if specified
 #
 if [[ "${REVERSE}" == "YES" ]]; then
-  WHITE="30m"     ;           # Black
+    WHITE="30m"     ;           # Black
 fi
 if [ -n "$FILE" ]; then       # Input file specified, we wont run any crsctl command and rely on the file as input
-  if [ ! -f ${FILE} ]; then
-    printf "\n\t\033[1;31m%s\033[m\n\n" "Cannot find the ${FILE} input file; cannot continue"
-    exit 222
-  else    # we use $FILE as input
-    printf "\n\t\033[1;34m%s\033[m\n\n" "Proceeding with the ${FILE} file as input file"
-  fi
+    if [ ! -f ${FILE} ]; then
+        printf "\n\t\033[1;31m%s\033[m\n\n" "Cannot find the ${FILE} input file; cannot continue"
+        exit 222
+    else    # we use $FILE as input
+        printf "\n\t\033[1;34m%s\033[m\n\n" "Proceeding with the ${FILE} file as input file"
+    fi
 fi
 
 if [ -z "$FILE" ]; then               # This is not needed when using an input file
-  if [[ "${USE_ORAENV}" == "YES" ]]; then
-    #
-    # Set the ASM env to be able to use crsctl commands
-    #
-    ORACLE_SID=`ps -ef | grep pmon | grep asm | ${AWK} '{print $NF}' | sed s'/asm_pmon_//' | egrep "^[+]"`
-    #
-    # If oratab exists, we check if there is an ASM entry trying to know if oraenv will work -- if we cannot find an ASM entry
-    # in oratab, we try to point the user in the right direction to fix it
-    #
-    if [[ -f "${ORATAB}" ]]; then
-      grep ^${ORACLE_SID} ${ORATAB} > /dev/null 2>&1
-      if [ $? -ne 0 ]; then
-        printf "\n\t\033[1;31m%s\033[m\n\n" "Cannot find an entry for ${ORACLE_SID} in ${ORATAB}. You can consider using the -e option or you may suffer from https://unknowndba.blogspot.com/2019/01/lost-entries-in-oratab-after-gi-122.html ; cannot continue at this point."
-        exit 888
-      fi
+    if [[ "${USE_ORAENV}" == "YES" ]]; then
+        #
+        # Set the ASM env to be able to use crsctl commands
+        #
+        ORACLE_SID=`ps -ef | grep pmon | grep asm | ${AWK} '{print $NF}' | sed s'/asm_pmon_//' | egrep "^[+]"`
+        #
+        # If oratab exists, we check if there is an ASM entry trying to know if oraenv will work -- if we cannot find an ASM entry
+        # in oratab, we try to point the user in the right direction to fix it
+        #
+        if [[ -f "${ORATAB}" ]]; then
+            grep ^${ORACLE_SID} ${ORATAB} > /dev/null 2>&1
+            if [ $? -ne 0 ]; then
+                printf "\n\t\033[1;31m%s\033[m\n\n" "Cannot find an entry for ${ORACLE_SID} in ${ORATAB}. You can consider using the -e option or you may suffer from https://unknowndba.blogspot.com/2019/01/lost-entries-in-oratab-after-gi-122.html ; cannot continue at this point."
+                exit 888
+            fi
+        fi
+        export ORAENV_ASK=NO
+        . oraenv > /dev/null 2>&1
     fi
-    export ORAENV_ASK=NO
-    . oraenv > /dev/null 2>&1
-  fi
-  if ! type crsctl > /dev/null 2>&1
-  then
-    printf "\n\t\033[1;31m%s\033[m\n\n" "Cannot find crsctl, cannot continue, please check if oraenv works or set your environment manually and use the -e option."          ;
-    exit 777
-  fi
+    if ! type crsctl > /dev/null 2>&1; then
+        printf "\n\t\033[1;31m%s\033[m\n\n" "Cannot find crsctl, cannot continue, please check if oraenv works or set your environment manually and use the -e option."          ;
+        exit 777
+    fi
 
-  #
-  # List of the nodes of the cluster
-  #
-  # Try to find if there is "db" in the hostname, if yes we can delete the common "<clustername>" pattern from the hosts for visibility
-  SHORT_NAMES="NO"
-  if [[ `olsnodes | head -1 | sed s'/,.*$//g' | tr '[:upper:]' '[:lower:]'` == *"db"* && "${LONG_NAMES}" == "NO" ]]; then
-           NODES=`olsnodes | sed s'/^.*db/db/g' | ${AWK} '{if (NR<2){txt=$0} else{txt=txt","$0}} END {print txt}'`
-    CLUSTER_NAME=`olsnodes | head -1 | sed s'/db.*$//g'`
-     SHORT_NAMES="YES"
-  else
-           NODES=`olsnodes | ${AWK} '{if (NR<2){txt=$0} else{txt=txt","$0}} END {print txt}'`
-    CLUSTER_NAME=`olsnodes -c`
-  fi
-  NAME_OF_THE_CLUSTER=`olsnodes -c`
-  # if oracle restart, olsnodes is here but returns nothing, we then set the NODES with the current hostname
-  if [ -z "${NODES}" ]; then
-    NODES=`hostname -s`
-  fi
+    #
+    # List of the nodes of the cluster
+    #
+    # Try to find if there is "db" in the hostname, if yes we can delete the common "<clustername>" pattern from the hosts for visibility
+    SHORT_NAMES="NO"
+    if [[ `olsnodes | head -1 | sed s'/,.*$//g' | tr '[:upper:]' '[:lower:]'` == *"db"* && "${LONG_NAMES}" == "NO" ]]; then
+               NODES=`olsnodes | sed s'/^.*db/db/g' | ${AWK} '{if (NR<2){txt=$0} else{txt=txt","$0}} END {print txt}'`
+        CLUSTER_NAME=`olsnodes | head -1 | sed s'/db.*$//g'`
+         SHORT_NAMES="YES"
+    else
+               NODES=`olsnodes | ${AWK} '{if (NR<2){txt=$0} else{txt=txt","$0}} END {print txt}'`
+        CLUSTER_NAME=`olsnodes -c`
+    fi
+    NAME_OF_THE_CLUSTER=`olsnodes -c`
+    # if oracle restart, olsnodes is here but returns nothing, we then set the NODES with the current hostname
+    if [ -z "${NODES}" ]; then
+        NODES=`hostname -s`
+    fi
 
-  if [[ "$WITH_COLORS" == "YES" ]]; then
-    COLOR_FOR_CLUSTER="\e[1;"${WHITE}
-  else
-    COLOR_FOR_CLUSTER=""
-  fi
-  printf "\n\t\t%s"${COLOR_FOR_CLUSTER}"%s\e[m" "Cluster " "$NAME_OF_THE_CLUSTER"
+    if [[ "$WITH_COLORS" == "YES" ]]; then
+        COLOR_FOR_CLUSTER="\e[1;"${WHITE}
+    else
+        COLOR_FOR_CLUSTER=""
+    fi
+    printf "\n\t\t%s"${COLOR_FOR_CLUSTER}"%s\e[m" "Cluster " "$NAME_OF_THE_CLUSTER"
 
-  #
-  # Show the Exadata model if possible (if this cluster is an Exadata)
-  #
-  if [ -f ${DBMACHINE} ] && [ -r ${DBMACHINE} ]; then
-    MODEL=`grep -i MACHINETYPES ${DBMACHINE} | sed -e s':</*MACHINETYPES>::g' -e s'/^ *//' -e s'/ *$//'`
-    printf "%s"${COLOR_FOR_CLUSTER}"%s\e[m\n" " is a " "$MODEL"
-  else
+    #
+    # Show the Exadata model if possible (if this cluster is an Exadata)
+    #
+    if [ -f ${DBMACHINE} ] && [ -r ${DBMACHINE} ]; then
+        MODEL=`grep -i MACHINETYPES ${DBMACHINE} | sed -e s':</*MACHINETYPES>::g' -e s'/^ *//' -e s'/ *$//'`
+        printf "%s"${COLOR_FOR_CLUSTER}"%s\e[m\n" " is a " "$MODEL"
+    else
+        printf "\n"
+    fi
     printf "\n"
-  fi
-  printf "\n"
 
-  # Get the info we want
-  cat /dev/null                                              > $TMP
-  if [ "$SHOW_DB" = "YES" ]; then
-    crsctl stat res -p -w "TYPE = ora.database.type"        >> $TMP
-    crsctl stat res -v -w "TYPE = ora.database.type"        >> $TMP
-  fi
-  if [ "$SHOW_LSNR" = "YES" ]; then
-    crsctl stat res -v -w "TYPE = ora.listener.type"        >> $TMP
-    crsctl stat res -p -w "TYPE = ora.listener.type"        >> $TMP
-    crsctl stat res -v -w "TYPE = ora.scan_listener.type"   >> $TMP
-    crsctl stat res -p -w "TYPE = ora.scan_listener.type"   >> $TMP
-    crsctl stat res -v -w "TYPE = ora.leaf_listener.type"   >> $TMP
-    crsctl stat res -p -w "TYPE = ora.leaf_listener.type"   >> $TMP
-    crsctl stat res -v -w "TYPE = ora.asm_listener.type"    >> $TMP
-    crsctl stat res -p -w "TYPE = ora.asm_listener.type"    >> $TMP
-  fi
-  if [ "$SHOW_SVC" = "YES" ]; then
-    crsctl stat res -v -w "TYPE = ora.service.type"          >> $TMP
-    crsctl stat res -p -w "TYPE = ora.service.type"          >> $TMP
-  fi
-  if [ "$SHOW_TECH" = "YES" ]; then
-    crsctl stat res -v -w "((TYPE != ora.database.type) AND (TYPE != ora.listener.type) AND (TYPE != ora.scan_listener.type) AND (TYPE != ora.service.type) AND (TYPE != ora.leaf_listener.type) AND (TYPE != ora.asm_listener.type))" >> $TMP
-    crsctl stat res -p -w "((TYPE != ora.database.type) AND (TYPE != ora.listener.type) AND (TYPE != ora.scan_listener.type) AND (TYPE != ora.service.type) AND (TYPE != ora.leaf_listener.type) AND (TYPE != ora.asm_listener.type))" >> $TMP
-  fi
+    # Get the info we want
+    cat /dev/null                                              > $TMP
+    if [ "$SHOW_DB" = "YES" ]; then
+        crsctl stat res -p -w "TYPE = ora.database.type"        >> $TMP
+        crsctl stat res -v -w "TYPE = ora.database.type"        >> $TMP
+    fi
+    if [ "$SHOW_LSNR" = "YES" ]; then
+        crsctl stat res -v -w "TYPE = ora.listener.type"        >> $TMP
+        crsctl stat res -p -w "TYPE = ora.listener.type"        >> $TMP
+        crsctl stat res -v -w "TYPE = ora.scan_listener.type"   >> $TMP
+        crsctl stat res -p -w "TYPE = ora.scan_listener.type"   >> $TMP
+        crsctl stat res -v -w "TYPE = ora.leaf_listener.type"   >> $TMP
+        crsctl stat res -p -w "TYPE = ora.leaf_listener.type"   >> $TMP
+        crsctl stat res -v -w "TYPE = ora.asm_listener.type"    >> $TMP
+        crsctl stat res -p -w "TYPE = ora.asm_listener.type"    >> $TMP
+    fi
+    if [ "$SHOW_SVC" = "YES" ]; then
+        crsctl stat res -v -w "TYPE = ora.service.type"          >> $TMP
+        crsctl stat res -p -w "TYPE = ora.service.type"          >> $TMP
+    fi
+    if [ "$SHOW_TECH" = "YES" ]; then
+        crsctl stat res -v -w "((TYPE != ora.database.type) AND (TYPE != ora.listener.type) AND (TYPE != ora.scan_listener.type) AND (TYPE != ora.service.type) AND (TYPE != ora.leaf_listener.type) AND (TYPE != ora.asm_listener.type))" >> $TMP
+        crsctl stat res -p -w "((TYPE != ora.database.type) AND (TYPE != ora.listener.type) AND (TYPE != ora.scan_listener.type) AND (TYPE != ora.service.type) AND (TYPE != ora.leaf_listener.type) AND (TYPE != ora.asm_listener.type))" >> $TMP
+    fi
 
-  # Easiest way to manage the different versions of crsctl outputs
-  awk '{if ($1 ~ /^NAME=/) {print "BREAK_HERE"; print  $0} else {print $0}}' $TMP > $TMP2
-  cp ${TMP2} ${TMP}
+    # Easiest way to manage the different versions of crsctl outputs
+    awk '{if ($1 ~ /^NAME=/) {print "BREAK_HERE"; print  $0} else {print $0}}' $TMP > $TMP2
+    cp ${TMP2} ${TMP}
 
-  if [ "$SHORT_NAMES" = "YES" ]; then
-    ${SED} -i "s/$CLUSTER_NAME//" $TMP
-  fi
-  NB_NODES=`olsnodes | wc -l`
+    if [ "$SHORT_NAMES" = "YES" ]; then
+        ${SED} -i "s/$CLUSTER_NAME//" $TMP
+    fi
+    NB_NODES=`olsnodes | wc -l`
 else            # If we use an input file
-  cp ${FILE} ${TMP}
-     NODES=`grep LAST_SERVER $TMP | awk -F"=" '{print $2}' | sort | uniq | grep -v "^$" | awk '{if (NR<2){txt=$0} else{txt=txt","$0}} END {print txt}'`
-  NB_NODES=`grep LAST_SERVER $TMP | awk -F"=" '{print $2}' | sort | uniq | wc -l`
+    cp ${FILE} ${TMP}
+       NODES=`grep LAST_SERVER $TMP | awk -F"=" '{print $2}' | sort | uniq | grep -v "^$" | awk '{if (NR<2){txt=$0} else{txt=txt","$0}} END {print txt}'`
+    NB_NODES=`grep LAST_SERVER $TMP | awk -F"=" '{print $2}' | sort | uniq | wc -l`
 fi      # End if [ -z "$FILE" ]
 
 
@@ -414,10 +413,10 @@ fi      # End if [ -z "$FILE" ]
 # Define the offset to apply to the status column depending on the number of nodes to make the tables visible for big implementations
 #
 if [ "$COL_NODE_OFFSET" = "99" ]; then
-  COL_NODE_OFFSET=3       ;
-  if [ "$NB_NODES" -eq "2" ]; then COL_NODE_OFFSET=6      ;       fi      ;
-  if [ "$NB_NODES" -eq "4" ]; then COL_NODE_OFFSET=5      ;       fi      ;
-  if [ "$NB_NODES" -gt "4" ]; then COL_NODE_OFFSET=3      ;       fi      ;
+    COL_NODE_OFFSET=3       ;
+    if [ "$NB_NODES" -eq "2" ]; then COL_NODE_OFFSET=6      ;       fi      ;
+    if [ "$NB_NODES" -eq "4" ]; then COL_NODE_OFFSET=5      ;       fi      ;
+    if [ "$NB_NODES" -gt "4" ]; then COL_NODE_OFFSET=3      ;       fi      ;
 fi
 
 ${AWK} -v           NODES="$NODES"           \
@@ -471,220 +470,203 @@ ${AWK} -v           NODES="$NODES"           \
 # A function to center the outputs with colors
 #
 function center(str, n, color, sep) {
-  right = int((n - length(str)) / 2)                                                              ;
-  left  = n - length(str) - right                                                                 ;
-  return sprintf(COLOR_BEGIN color "%" left "s%s%" right "s" COLOR_END sep, "", str, "" )         ;
+    right = int((n - length(str)) / 2)                                                              ;
+    left  = n - length(str) - right                                                                 ;
+    return sprintf(COLOR_BEGIN color "%" left "s%s%" right "s" COLOR_END sep, "", str, "" )         ;
 }
 #
 # Colorize a string
 #
 function in_color(str, color) {
-  return sprintf(COLOR_BEGIN color "%s" COLOR_END, str)                                           ;
+    return sprintf(COLOR_BEGIN color "%s" COLOR_END, str)                                           ;
 }
 #
 # Get a date in format MM/DD/YYYY HH24:MI:SS and return the rounded number hours difference between this date and the current date
 #
 function diff_hours(a_date) {
-  if ((a_date == "NEVER ") || (a_date == " ")) {
-    return (999999999999999999999)                                                                ;
-  } else {
-    split(a_date, temp, /[\/ :]/)                                                                 ;
-    return (systime()-mktime (temp[3]" "temp[1]" "temp[2]" "temp[4]" "temp[5]" "temp[6]))/(60*60) ;
-  }
+    if ((a_date == "NEVER ") || (a_date == " ")) {
+        return (999999999999999999999)                                                                ;
+    } else {
+        split(a_date, temp, /[\/ :]/)                                                                 ;
+        return (systime()-mktime (temp[3]" "temp[1]" "temp[2]" "temp[4]" "temp[5]" "temp[6]))/(60*60) ;
+    }
 }
 #
 # Get a string and return it with a nice case: first character in upper case ad the others in lower case (ABCD => Abcd)
 #
 function nice_case(str) {
-  return sprintf("%s", toupper(substr(str,1,1)) tolower(substr(str,2,length(str))))               ;
+    return sprintf("%s", toupper(substr(str,1,1)) tolower(substr(str,2,length(str))))               ;
 }
 #
 # Print a legend for the recent restarted instances, listeners and services
 #
 function print_legend_recent_restarted() {
-  if (RECENT_RESTARTED == 1) {
-    printf("%s", " ")                                                                             ;
-    printf(COLOR_BEGIN WITH_BACK "%-3s" COLOR_END, " ")                                           ;
-    if (DIFF_HOURS_UNIT == "h")     { UNIT="hour"           }
-    if (DIFF_HOURS_UNIT == "d")     { UNIT="day"            }
-    if (DIFF_HOURS_UNIT == "w")     { UNIT="week"           }
-    if (DIFF_HOURS_UNIT == "m")     { UNIT="month"          }
-    if (DIFF_HOURS_UNIT == "y")     { UNIT="year"           }
-    if (HOURS > 1)                  { UNIT=UNIT"s"          }
-    printf(COLOR_BEGIN WHITE " %-s\n " COLOR_END, ": Has been restarted less than "HOURS" "UNIT" ago");
-  }
+    if (RECENT_RESTARTED == 1) {
+        printf("%s", " ")                                                                             ;
+        printf(COLOR_BEGIN WITH_BACK "%-3s" COLOR_END, " ")                                           ;
+        if (DIFF_HOURS_UNIT == "h")     { UNIT="hour"           }
+        if (DIFF_HOURS_UNIT == "d")     { UNIT="day"            }
+        if (DIFF_HOURS_UNIT == "w")     { UNIT="week"           }
+        if (DIFF_HOURS_UNIT == "m")     { UNIT="month"          }
+        if (DIFF_HOURS_UNIT == "y")     { UNIT="year"           }
+        if (HOURS > 1)                  { UNIT=UNIT"s"          }
+        printf(COLOR_BEGIN WHITE " %-s\n " COLOR_END, ": Has been restarted less than "HOURS" "UNIT" ago");
+    }
 }
 #
 # Print a legend if we found an issue in the status (STATUS != TARGET)
 #
 function print_legend_status_issue() {
-  if (STATUS_ISSUE == 1) {
-    printf(COLOR_BEGIN WITH_BACK2 "%-3s" COLOR_END, " ")                                          ;
-    printf(COLOR_BEGIN WHITE " %-s\n " COLOR_END, ": STATUS and TARGET are different")            ;
-  }
+    if (STATUS_ISSUE == 1) {
+        printf(COLOR_BEGIN WITH_BACK2 "%-3s" COLOR_END, " ")                                          ;
+        printf(COLOR_BEGIN WHITE " %-s\n " COLOR_END, ": STATUS and TARGET are different")            ;
+    }
 }
 #
 # Print a legend when something is disabled
 #
 function print_legend_disabled(a_variable, a_text) {
-  if (a_variable == 1) {
-    printf("%s", " ")                                                                             ;
-    printf("%s", center(DISABLED, 3, RED))                                                        ;
-    printf("%-s\n", in_color(" : "a_text" is disabled", WHITE))                                   ;
-  }
+    if (a_variable == 1) {
+        printf("%s", " ")                                                                             ;
+        printf("%s", center(DISABLED, 3, RED))                                                        ;
+        printf("%-s\n", in_color(" : "a_text" is disabled", WHITE))                                   ;
+    }
 }
 #
 # A function that just print a "---" white line
 #
 function print_a_line(size) {
-  if ( ! size) {
-    size = COL_DB+COL_VER+(COL_NODE*n)+COL_TYPE+n+3                                               ;
-  }
-  printf("%s", COLOR_BEGIN WHITE)                                                                 ;
-  for (k=1; k<=size; k++) {printf("%s", "-");}                                                    ;       # n = number of nodes
-  printf("%s", COLOR_END"\n")                                                                     ;
+    if ( ! size) {
+        size = COL_DB+COL_VER+(COL_NODE*n)+COL_TYPE+n+3                                               ;
+    }
+    printf("%s", COLOR_BEGIN WHITE)                                                                   ;
+    for (k=1; k<=size; k++) {printf("%s", "-");}                                                      ;       # n = number of nodes
+    printf("%s", COLOR_END"\n")                                                                       ;
 }
 { # Fill 2 tables with the OH and the version from "crsctl stat res -p -w "TYPE = ora.database.type""
-  if ($1 == "NAME") {
-    sub("^ora.", "", $2)                                                                          ;
-    sub(/\(.*$/, "", $2)                                                                          ;       # Remove the consumer group
-    type = "TECH"                                                                                 ;
+    if ($1 == "NAME") {
+        sub("^ora.", "", $2)                                                                          ;
+        sub(/\(.*$/, "", $2)                                                                          ; # Remove the consumer group
+        type = "TECH"                                                                                 ;
 
-    if ($2 ~ ".db$") {                                                                                    # Databases
-      type = "DB"                                                                                 ;
-      sub(".db$",  "", $2)                                                                        ;
+    if ($2 ~ ".db$") {                                                                                  # Databases
+        type = "DB"                                                                                   ;
+        sub(".db$",  "", $2)                                                                          ;
     }
 
-    if ($2 ~ ".lsnr") {                                                                                   # Listeners
-      sub(".lsnr$", "", $2)                                                                       ;
-      tab_lsnr[$2]    = $2                                                                        ;
-      type            =       "LISTENER"                                                          ;
+    if ($2 ~ ".lsnr") {                                                                                 # Listeners
+        sub(".lsnr$", "", $2)                                                                         ;
+        tab_lsnr[$2]    = $2                                                                          ;
+        type            =       "LISTENER"                                                            ;
     }
 
-    if ($2 ~ ".svc") {                                                                                    # Services
-      sub(".svc$", "", $2)                                                                        ;
-      tab_svc[$2]=$2                                                                              ;
-          service=$2                                                                              ;
-      sub(/^[^.]*\./, "", service)                                                                ;       # Remove the DB name
-      if (length(service) > COL_VER-1) {                                                                  # To adapt the column size
-        COL_VER = length(service) +1                                                              ;
-      }
-      type             =       "SERVICE"                                                          ;
+    if ($2 ~ ".svc") {                                                                                 # Services
+        sub(".svc$", "", $2)                                                                          ;
+        tab_svc[$2]=$2                                                                                ;
+            service=$2                                                                                ;
+        sub(/^[^.]*\./, "", service)                                                                  ; # Remove the DB name
+
+        if (length(service) > COL_VER-1) {                                                              # To adapt the column size
+            COL_VER = length(service) +1                                                              ;
+        }
+        type             =       "SERVICE"                                                            ;
     }
 
-    DB=$2                                                                                         ;
-    split($2, temp, ".")                                                                          ;
+    DB=$2                                                                                             ;
+    split($2, temp, ".")                                                                              ;
+
     if (length(temp[1]) > COL_DB-1) {                                                                     # To adapt the 1st column size
-      COL_DB = length(temp[1]) +1                                                                 ;
+        COL_DB = length(temp[1]) +1                                                                   ;
     }
 
     if (type == "TECH") {
-      if ($2 ~ /\./) {
-        sub(/\.[[:alnum:]]*$/, "", $2)                                                            ;
-        # We put the type before the name to sort it by type easily later
-           type_name = temp[length(temp)]"."$2                                                    ;
-        tab_tech[$2] = type_name                                                                  ;
-        if (length($2) > COL_VER-1) {
-             COL_VER = length($2) + 1                                                             ;
+        if ($2 ~ /\./) {
+            sub(/\.[[:alnum:]]*$/, "", $2)                                                            ;
+            # We put the type before the name to sort it by type easily later
+               type_name = temp[length(temp)]"."$2                                                    ;
+            tab_tech[$2] = type_name                                                                  ;
+            if (length($2) > COL_VER-1) {
+                 COL_VER = length($2) + 1                                                             ;
+            }
+        } else {
+            tab_tech[temp[1]] = temp[1]                                                               ;
         }
-      } else {
-        #tab_tech[temp[1]] = temp[1]"."temp[1]                                                    ;
-        tab_tech[temp[1]] = temp[1]                                                               ;
-      }
     }
 
-    getline; getline                                                                              ;
-		if ($1 == "ACL")                        # crsctl stat res -p output
-		{
-			if (type == "DB")
-			{
-				# Get the owner and the group
-				match($2, /owner:([[:alnum:]]*):.*/, OWNER)                             ;
-				match($2, /^.*pgrp:([[:alnum:]]*):.*/, GROUP)                           ;
+    getline; getline                                                                                  ;
+    if ($1 == "ACL") {                        # crsctl stat res -p output
+        if (type == "DB")
+        {
+            # Get the owner and the group
+            match($2, /owner:([[:alnum:]]*):.*/, OWNER)                                              ;
+            match($2, /^.*pgrp:([[:alnum:]]*):.*/, GROUP)                                            ;
 
-				while (getline)
-				{
-					if ($1 == "ORACLE_HOME")
-					{                    OH = $2                                    ;
-						match($2, /1[0-9]\.[0-9]\.?[0-9]?\.?[0-9]?/)            ;       # Grab the version from the OH path)
-							VERSION = substr($2,RSTART,RLENGTH)             ;
-					}
-					if ($1 == "DATABASE_TYPE")                                              # RAC / RACOneNode / Single Instance are expected here
-					{
-						     dbtype[DB] = $2                                    ;
-					}
-					if ($1 == "ROLE")                                                       # Primary / Standby expected here
-					{              role[DB] = $2                                    ;
-					}
-					if ($1 == "ENABLED")                                                    # Instance is enabled (1) or disabled (0)
-					{       #for (i=1; i<=n; i++)                                            # n = number of nodes
-						#{       is_enabled[DB,nodes[i]]= $2                     ;
-						#}
-						enabled = $2						 ;	# Save it for later
-						#is_enabled[DB,nodes]= $2                     	;
-						#while(getline)
-						#{       if ($1 ~ /ENABLED@SERVERNAME/ )
-						#        {       sub("ENABLED@SERVERNAME[(]", "", $1)    ;
-						#                sub(")", "", $1)                        ;
-						#                is_enabled[DB,$1] = $2                  ;
-						#        } else {
-						#                break                                   ;
-						#        }
-						#}
-					}
-					if ($1 == "GEN_USR_ORA_INST_NAME")
-					{	instance = $2						;
-						while (getline)
-						{	if (($1 ~ /^GEN_USR_ORA_INST_NAME@SERVERNAME/) && ($2 == instance))
-							{
-								sub("GEN_USR_ORA_INST_NAME@SERVERNAME[(]", "", $1)	;
-								sub(")", "", $1)			;
-								is_enabled[DB,$1] = enabled		;
-								break					;
-							}
-						}
-					}
-					if ($0 ~ /^$/)
-					{           version[DB] = VERSION                               ;
-							 oh[DB] = OH                                    ;
+            while (getline)
+            {
+                if ($1 == "ORACLE_HOME") {
+                    OH = $2                                                                          ;
+                    match($2, /1[0-9]\.[0-9]\.?[0-9]?\.?[0-9]?/)                                     ;       # Grab the version from the OH path)
+                    VERSION = substr($2,RSTART,RLENGTH)                                              ;
+            }
+            if ($1 == "DATABASE_TYPE") {                                                                     # RAC / RACOneNode / Single Instance are expected here
+                dbtype[DB] = $2                                                                      ;
+            }
+            if ($1 == "ROLE") {                                                                              # Primary / Standby expected here
+                role[DB] = $2                                                                        ;
+            }
+            if ($1 == "ENABLED") {                                                                           # Instance is enabled (1) or disabled (0)
+                enabled = $2                                                                         ;       # Save it for later
+            }
+            if ($1 == "GEN_USR_ORA_INST_NAME") {
+                instance = $2                                                                        ;
+                while (getline) {
+                    if (($1 ~ /^GEN_USR_ORA_INST_NAME@SERVERNAME/) && ($2 == instance)) {
+                        sub("GEN_USR_ORA_INST_NAME@SERVERNAME[(]", "", $1)                           ;
+                        sub(")", "", $1)                                                             ;
+                        is_enabled[DB,$1] = enabled                                                  ;
+                        break                                                                        ;
+                    }
+                }
+            }
+            if ($0 ~ /^$/) {
+                version[DB] = VERSION                                                                ;
+                     oh[DB] = OH                                                                     ;
 
-						if (!(OH in oh_list))
-						{
-							oh_ref++                                        ;
-						    oh_list[OH] = oh_ref                                ;
-						    o_list[OH] = OWNER[1]                               ;
-						    g_list[OH] = GROUP[1]                               ;
-							if (length(OH)       > COL_OH)    {        COL_OH = length(OH)                  ; }
-							if (length(OWNER[1]) > COL_OWNER) {     COL_OWNER = length(OWNER[1])            ; }
-							if (length(GROUP[1]) > COL_GROUP) {     COL_GROUP = length(GROUP[1])            ; }
-						}
-						break                                                   ;
-					}
-				}
-			}       # End if (type == "DB")
-			if (type == "SERVICE")
-			{       while(getline)
-				{
-					if ($1 == "ENABLED")                                                    # Service is enabled (1) or disabled (0)
-					{       for (i=1; i<=n; i++)                                            # n = number of nodes
-						{       is_enabled[DB,nodes[i]]= $2                     ;
-						}
-						while(getline)
-						{       if ($1 ~ /ENABLED@SERVERNAME/ )
-							{       sub("ENABLED@SERVERNAME[(]", "", $1)    ;
-								sub(")", "", $1)                        ;
-								is_enabled[DB,$1] = $2                  ;
-							} else {
-								break                                   ;
-							}
-						}
-					}
-					if ($0 ~ /^$/)
-					{       break                                                   ;
-					}
-				}
-
-			}       # End if (type == "SERVICE")
+                if (!(OH in oh_list))
+                {
+                    oh_ref++                                                                         ;
+                    oh_list[OH] = oh_ref                                                             ;
+                    o_list[OH] = OWNER[1]                                                            ;
+                    g_list[OH] = GROUP[1]                                                            ;
+                    if (length(OH)       > COL_OH)    {        COL_OH = length(OH)                   ; }
+                    if (length(OWNER[1]) > COL_OWNER) {     COL_OWNER = length(OWNER[1])             ; }
+                    if (length(GROUP[1]) > COL_GROUP) {     COL_GROUP = length(GROUP[1])             ; }
+                }
+                break                                                                                ;
+            }
+        }
+    }       # End if (type == "DB")
+    if (type == "SERVICE") {
+        while(getline) {
+            if ($1 == "ENABLED") {                                                                      # Service is enabled (1) or disabled (0)
+                for (i=1; i<=n; i++) {                                                                  # n = number of nodes
+                    is_enabled[DB,nodes[i]]= $2                                                      ;
+                }
+                while(getline) {
+                    if ($1 ~ /ENABLED@SERVERNAME/ ) {
+                        sub("ENABLED@SERVERNAME[(]", "", $1)                                         ;
+                        sub(")", "", $1)                                                             ;
+                        is_enabled[DB,$1] = $2                                                       ;
+                    } else {
+                        break                                                                        ;
+                    }
+                }
+            }
+            if ($0 ~ /^$/) {
+                break                                                                                ;
+            }
+        }
+    }       # End if (type == "SERVICE")
 			#if (DB in tab_lsnr == 1)
 			if (type == "LISTENER")
 			{
@@ -1231,27 +1213,23 @@ then
 	cp ${TMP} ${TMP2}
 fi
 
-if [[ "$WITH_COLORS" == "YES" ]]
-then
-	cat ${TMP2}
+if [[ "$WITH_COLORS" == "YES" ]]; then
+    cat ${TMP2}
 else
-	cat ${TMP2} | sed -r "s/\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]//g"      # Remove the colors
+    cat ${TMP2} | sed -r "s/\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]//g"      # Remove the colors
 fi
 
 printf "\n"
 
-if [ -f ${TMP} ]
-then
-        if [ -n "$OUT" ]
-        then
-            cp $TMP $OUT
-            printf "\n\t\033[1;34m%s\033[m\n\n" "Output file $OUT has been generated"
-        fi
-        rm -f ${TMP}
+if [ -f ${TMP} ]; then
+    if [ -n "$OUT" ]; then
+        cp $TMP $OUT
+        printf "\n\t\033[1;34m%s\033[m\n\n" "Output file $OUT has been generated"
+    fi
+    rm -f ${TMP}
 fi
-if [ -f ${TMP2} ]
-then
-        rm -f ${TMP2}
+if [ -f ${TMP2} ]; then
+    rm -f ${TMP2}
 fi
 
 #*********************************************************************************************************
