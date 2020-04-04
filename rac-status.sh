@@ -962,7 +962,7 @@ END {       #
             }
             printf(COLOR_BEGIN WHITE " %-"COL_VER"s" COLOR_END"|", service, WHITE)      ; # Service
 
-            for (i = 1; i <= n; i++) {
+            for (i = 1; i <= n; i++) {                                                    # For each node
                 dbstatus =           status[svc_sorted[j],nodes[i]]                     ;
                 dbtarget =           target[svc_sorted[j],nodes[i]]                     ;
                 dbdetail =   status_details[svc_sorted[j],nodes[i]]                     ;
@@ -978,170 +978,181 @@ END {       #
 	              COL_ONLINE=WITH_BACK2                                             ;
 	               COL_OTHER=WITH_BACK2                                             ;
 	            STATUS_ISSUE=1                                                      ;
-                } # ici
-					if (is_enabled[svc_sorted[j],nodes[i]] == 0)                            # Service disabled
-					{
-						SERVICE_DISABLED = 1                                    ;
-						right = int((COL_NODE - length(dbstatus)) / 2)          ;
-						left  = COL_NODE - length(dbstatus) - right             ;
-						if (length(dbstatus) < COL_DB+4)
-						{       left--                                          ;
-						}
-						if (dbstatus == "")             {printf("%s", center(DISABLED, COL_NODE, RED, COL_SEP ))      ;} else
-						if (dbstatus == "ONLINE")       {printf("%"left"s%s %s%"right"s", "", in_color(nice_case(dbstatus), COL_ONLINE), in_color(DISABLED, RED), COL_SEP);}
-						else                            {printf("%"left"s%s %s%"right"s", "", in_color(nice_case(dbstatus), COL_OTHER ), in_color(DISABLED, RED), COL_SEP);}
-					} else {
-						if (dbstatus == "")             {printf("%s", center(UNKNOWN,             COL_NODE, COL_DEFAULT, COL_SEP   ))      ;} else
-						if (dbstatus == "ONLINE")       {printf("%s", center(nice_case(dbstatus), COL_NODE, COL_ONLINE,  COL_SEP   ))      ;}
-						else                            {printf("%s", center(nice_case(dbstatus), COL_NODE, COL_OTHER,   COL_SEP   ))      ;}
-					}
-				}
-				printf("\n")                                                            ;
-			}
-			# a "---" line under the header
-			print_a_line(COL_DB+COL_NODE*n+COL_VER+n+2)                                     ;
-			print_legend_disabled(SERVICE_DISABLED, "Service")                              ;
-			print_legend_recent_restarted()                                                 ;
-			print_legend_status_issue()                                                     ;
-			    STATUS_ISSUE=0                                                              ;
-			RECENT_RESTARTED=0                                                              ;
-			printf("\n")                                                                    ;
-		}
+                } 
+                if (is_enabled[svc_sorted[j],nodes[i]] == 0) {                            # Service disabled
+                    SERVICE_DISABLED = 1                                                ;
+                    right = int((COL_NODE - length(dbstatus)) / 2)                      ;  
+                    left  = COL_NODE - length(dbstatus) - right                         ;
+                    if (length(dbstatus) < COL_DB+4) {
+                        left--                                                          ; 
+                    }
+                    if (dbstatus == "")             {printf("%s", center(DISABLED, COL_NODE, RED, COL_SEP ))      ;} else
+                    if (dbstatus == "ONLINE")       {printf("%"left"s%s %s%"right"s", "", in_color(nice_case(dbstatus), COL_ONLINE), in_color(DISABLED, RED), COL_SEP);}
+                    else                            {printf("%"left"s%s %s%"right"s", "", in_color(nice_case(dbstatus), COL_OTHER ), in_color(DISABLED, RED), COL_SEP);}
+                } else {
+                    if (dbstatus == "")             {printf("%s", center(UNKNOWN,             COL_NODE, COL_DEFAULT, COL_SEP   ))      ;} else
+                    if (dbstatus == "ONLINE")       {printf("%s", center(nice_case(dbstatus), COL_NODE, COL_ONLINE,  COL_SEP   ))      ;}
+                    else                            {printf("%s", center(nice_case(dbstatus), COL_NODE, COL_OTHER,   COL_SEP   ))      ;}
+                }
+            }                                                                             # End of each node
+            printf("\n")                                                                ;
+        }
+        # a "---" line under the header
+        print_a_line(COL_DB+COL_NODE*n+COL_VER+n+2)                                     ;
+        print_legend_disabled(SERVICE_DISABLED, "Service")                              ;
+        print_legend_recent_restarted()                                                 ;
+        print_legend_status_issue()                                                     ;
+            STATUS_ISSUE=0                                                              ;
+        RECENT_RESTARTED=0                                                              ;
+        printf("\n")                                                                    ;
+    }   # End services
+    #
+    # Databases
+    #
+    if (length(version) > 0) {   # We print only if we have something to show
+        # A header for the databases
+        printf("%s", center("DB"        , COL_DB, WHITE, COL_SEP))                       ;
+        printf("%s", center("Version"   , COL_VER+1, WHITE, COL_SEP))                    ;
+        n=asort(nodes)                                                                   ; # sort array nodes
+        for (i = 1; i <= n; i++) {
+            printf("%s", center(nodes[i], COL_NODE, WHITE, COL_SEP))                     ;
+        }
+        printf("%s", center("DB Type"    , COL_TYPE, WHITE, COL_SEP))                    ;
+        printf("\n")                                                                     ;
 
-		#
-		# Databases
-		#
-		if (length(version) > 0)                # We print only if we have something to show
-		{
-			# A header for the databases
-			printf("%s", center("DB"        , COL_DB, WHITE, COL_SEP))                       ;
-			printf("%s", center("Version"   , COL_VER+1, WHITE, COL_SEP))                    ;
-			n=asort(nodes)                                                                   ;       # sort array nodes
-			for (i = 1; i <= n; i++) {
-				printf("%s", center(nodes[i], COL_NODE, WHITE, COL_SEP))                 ;
-			}
-			printf("%s", center("DB Type"    , COL_TYPE, WHITE, COL_SEP))                    ;
-			printf("\n")                                                                     ;
+        # a "---" line under the header
+        print_a_line()                                                                   ;
 
-			# a "---" line under the header
-			print_a_line()                                                                   ;
+        # Print the databases
+        m=asorti(version, version_sorted)                                                ;
+        for (j = 1; j <= m; j++) {
+            printf(COLOR_BEGIN WHITE " %-"COL_DB-1"s" COLOR_END"|", version_sorted[j], WHITE)                ;     # Database
+            printf(COLOR_BEGIN WHITE " %-"COL_VER-6"s" COLOR_END, version[version_sorted[j]], COL_VER, WHITE);     # Version
+            printf(COLOR_BEGIN WHITE "%6s" COLOR_END"|"," ("oh_list[oh[version_sorted[j]]] ") ")             ;     # OH id
 
-			# Print the databases
-			m=asorti(version, version_sorted)                                                ;
-			for (j = 1; j <= m; j++)
-			{
-				printf(COLOR_BEGIN WHITE " %-"COL_DB-1"s" COLOR_END"|", version_sorted[j], WHITE)                ;     # Database
-				printf(COLOR_BEGIN WHITE " %-"COL_VER-6"s" COLOR_END, version[version_sorted[j]], COL_VER, WHITE);     # Version
-				printf(COLOR_BEGIN WHITE "%6s" COLOR_END"|"," ("oh_list[oh[version_sorted[j]]] ") ")             ;     # OH id
+            for (i = 1; i <= n; i++) {                                                     # For each node
+                dbstatus =           status[version_sorted[j],nodes[i]]                  ;
+                dbtarget =           target[version_sorted[j],nodes[i]]                  ;
+                dbdetail =   status_details[version_sorted[j],nodes[i]]                  ;
+                #
+                # Print the status here, all that are not listed in that if ladder will appear in RED
+                #
+                if ((started[version_sorted[j],nodes[i]] < DIFF_HOURS) && (started[version_sorted[j],nodes[i]])) {
+                            COL_OPEN=WITH_BACK                                           ;
+                        COL_READONLY=WITH_BACK                                           ;
+                            COL_SHUT=WITH_BACK                                           ;
+                           COL_OTHER=WITH_BACK                                           ;
+                    RECENT_RESTARTED=1                                                   ;
+                } else  {
+                            COL_OPEN=GREEN                                               ;
+                        COL_READONLY=WHITE                                               ;
+                            COL_SHUT=YELLOW                                              ;
+                           COL_OTHER=RED                                                 ;
+                }
+                if (dbstatus != dbtarget) {
+                            COL_OPEN=WITH_BACK2                                          ;
+                        COL_READONLY=WITH_BACK2                                          ;
+                            COL_SHUT=WITH_BACK2                                          ;
+                           COL_OTHER=WITH_BACK2                                          ;
+                        STATUS_ISSUE=1                                                   ;
+                }
+                if ((is_enabled[version_sorted[j],nodes[i]] == 0) && (is_enabled[version_sorted[j],nodes[i]] != "")) { # Instance disabled
+                    INSTANCE_DISABLED = 1                                                ; 
+                    right = int((COL_NODE - length(dbdetail)) / 2)                       ;
+                    left  = COL_NODE - length(dbdetail) - right                          ;
+                    if (length(dbdetail) < COL_DB+4) {
+                        left--                                                           ;
+                    }
 
-				for (i = 1; i <= n; i++)
-				{
-					dbstatus =           status[version_sorted[j],nodes[i]]         ;
-					dbtarget =           target[version_sorted[j],nodes[i]]         ;
-					dbdetail =   status_details[version_sorted[j],nodes[i]]         ;
-					#
-					# Print the status here, all that are not listed in that if ladder will appear in RED
-					#
-					if ((started[version_sorted[j],nodes[i]] < DIFF_HOURS) && (started[version_sorted[j],nodes[i]]))
-					{           COL_OPEN=WITH_BACK                                  ;
-						COL_READONLY=WITH_BACK                                  ;
-						    COL_SHUT=WITH_BACK                                  ;
-						   COL_OTHER=WITH_BACK                                  ;
-					    RECENT_RESTARTED=1                                          ;
-					} else  {
-						    COL_OPEN=GREEN                                      ;
-						COL_READONLY=WHITE                                      ;
-						    COL_SHUT=YELLOW                                     ;
-						   COL_OTHER=RED                                        ;
-					}
-					if (dbstatus != dbtarget)
-					{
-						    COL_OPEN=WITH_BACK2                                 ;
-						COL_READONLY=WITH_BACK2                                 ;
-						    COL_SHUT=WITH_BACK2                                 ;
-						   COL_OTHER=WITH_BACK2                                 ;
-						STATUS_ISSUE=1                                          ;
-					}
-					if ((is_enabled[version_sorted[j],nodes[i]] == 0) && (is_enabled[version_sorted[j],nodes[i]] != ""))                            # Instance disabled
-					{
-						INSTANCE_DISABLED = 1                                   ;
-						right = int((COL_NODE - length(dbdetail)) / 2)          ;
-						left  = COL_NODE - length(dbdetail) - right             ;
-						if (length(dbdetail) < COL_DB+4)
-						{       left--                                          ;
-						}
+                    if (dbdetail == "") {
+                        printf("%s", center(DISABLED, COL_NODE, RED, COL_SEP ))          ;
+                    } else if (dbdetail == "Open") {
+                        printf("%"left"s%s %s%"right"s", "", in_color(nice_case(dbdetail), COL_ONLINE),   in_color(DISABLED, RED), COL_SEP);
+                    } else if (dbdetail ~  /Readonly/) {
+                        printf("%"left"s%s %s%"right"s", "", in_color(nice_case(dbdetail), COL_READONLY), in_color(DISABLED, RED), COL_SEP);
+                    } else if (dbdetail ~  /Shut/) {
+                        printf("%"left"s%s %s%"right"s", "", in_color(nice_case(dbdetail), COL_SHUT),     in_color(DISABLED, RED), COL_SEP);
+                    } else {
+                        printf("%"left"s%s %s%"right"s", "", in_color(nice_case(dbdetail), COL_OTHER),    in_color(DISABLED, RED), COL_SEP);
+                    }
+                } else {
+                    if (dbdetail == "")             {printf("%s", center(UNKNOWN,             COL_NODE, COL_DEFAULT, COL_SEP ))  ;}      else
+                    if (dbdetail == "Open")         {printf("%s", center(nice_case(dbdetail), COL_NODE, COL_OPEN,    COL_SEP ))  ;}      else
+                    if (dbdetail ~  /Readonly/)     {printf("%s", center(nice_case(dbdetail), COL_NODE, COL_READONLY,COL_SEP ))  ;}      else
+                    if (dbdetail ~  /Shut/)         {printf("%s", center(nice_case(dbdetail), COL_NODE, COL_SHUT,    COL_SEP ))  ;}      else
+                                                    {printf("%s", center(nice_case(dbdetail), COL_NODE, COL_OTHER,   COL_SEP ))  ;}
+                }
+            } # End for each node
+            #
+            # Color the DB Type column depending on the ROLE of the database (20170619)
+            #
+            if (role[version_sorted[j]] == "PRIMARY") {
+                ROLE_COLOR=WHITE                                                         ;
+                ROLE_SHORT=" (P)"                                                        ; 
+            } else {
+                ROLE_COLOR=RED                                                           ;
+                ROLE_SHORT=" (S)"                                                        ; 
+            }
+            printf("%s", center(dbtype[version_sorted[j]] ROLE_SHORT, COL_TYPE, ROLE_COLOR, COL_SEP)) ;
+            printf("\n")                                                                 ;
+        }
 
-						if (dbdetail == "")             {printf("%s",                           center(DISABLED, COL_NODE, RED, COL_SEP ))                                    ;} else
-						if (dbdetail == "Open")         {printf("%"left"s%s %s%"right"s", "", in_color(nice_case(dbdetail), COL_ONLINE),   in_color(DISABLED, RED), COL_SEP);} else
-						if (dbdetail ~  /Readonly/)     {printf("%"left"s%s %s%"right"s", "", in_color(nice_case(dbdetail), COL_READONLY), in_color(DISABLED, RED), COL_SEP);} else
-						if (dbdetail ~  /Shut/)         {printf("%"left"s%s %s%"right"s", "", in_color(nice_case(dbdetail), COL_SHUT),     in_color(DISABLED, RED), COL_SEP);} else
-										{printf("%"left"s%s %s%"right"s", "", in_color(nice_case(dbdetail), COL_OTHER),    in_color(DISABLED, RED), COL_SEP);}
+        # a "---" line as a footer
+        print_a_line()                                                                   ;
 
-					} else {
-						if (dbdetail == "")             {printf("%s", center(UNKNOWN,             COL_NODE, COL_DEFAULT, COL_SEP ))  ;}      else
-						if (dbdetail == "Open")         {printf("%s", center(nice_case(dbdetail), COL_NODE, COL_OPEN,    COL_SEP ))  ;}      else
-						if (dbdetail ~  /Readonly/)     {printf("%s", center(nice_case(dbdetail), COL_NODE, COL_READONLY,COL_SEP ))  ;}      else
-						if (dbdetail ~  /Shut/)         {printf("%s", center(nice_case(dbdetail), COL_NODE, COL_SHUT,    COL_SEP ))  ;}      else
-										{printf("%s", center(nice_case(dbdetail), COL_NODE, COL_OTHER,   COL_SEP ))  ;}
-					}
-				}
-				#
-				# Color the DB Type column depending on the ROLE of the database (20170619)
-				#
-				if (role[version_sorted[j]] == "PRIMARY") { ROLE_COLOR=WHITE ; ROLE_SHORT=" (P)"; } else { ROLE_COLOR=RED ; ROLE_SHORT=" (S)" }
-				printf("%s", center(dbtype[version_sorted[j]] ROLE_SHORT, COL_TYPE, ROLE_COLOR, COL_SEP))           ;
+        # Print the OH list and a legend for the DB Type colors underneath the table
+        printf ("%s", "ORACLE_HOME references listed in the Version column ")            ;
 
-				printf("\n")                                                            ;
-			}
+        if (oh_ref > 1) {
+            printf ("(%s)", "\"" sprintf(COLOR_BEGIN TEAL "%s" COLOR_END, "\47\47") "\" means \"same as above\"") ;
+        }
+        printf ("\n\n")                                                                  ;
 
-			# a "---" line as a footer
-			print_a_line()                                                                  ;
+        previous_group = ""                                                              ;
+        previous_owner = ""                                                              ;
+        if (COL_OWNER%2) { COL_OWNER++  }
+        if (COL_GROUP%2) { COL_GROUP++  }                                                ;
+        g_same_as_above=sprintf(COLOR_BEGIN TEAL "%"(COL_GROUP/2)-1"s%s" COLOR_END, "", "\47\47")                        ;
+        o_same_as_above=sprintf(COLOR_BEGIN TEAL "%"(COL_OWNER/2)-1"s%s%"(COL_OWNER/2)-1"s" COLOR_END, "", "\47\47", "") ;
 
-			# Print the OH list and a legend for the DB Type colors underneath the table
-			printf ("%s", "ORACLE_HOME references listed in the Version column ")           ;
-			if (oh_ref > 1)
-			{
-				printf ("(%s)", "\"" sprintf(COLOR_BEGIN TEAL "%s" COLOR_END, "\47\47") "\" means \"same as above\"")           ;
-			}
-			printf ("\n\n")                                                                 ;
+        # to ease the ORACLE_HOME sorting
+        for (x in oh_list) {
+            to_print[oh_list[x]] = x                                                     ;
+        }
+        for (i=1; i<=oh_ref; i++) {
+            # to ease the naming
+	    the_oh=to_print[i]                                                           ;
+             owner=o_list[to_print[i]]                                                   ;
+             group=g_list[to_print[i]]                                                   ;
+            if (group == previous_group) {
+                group_to_print = g_same_as_above                                         ;
+            } else {
+                group_to_print = group                                                   ;
+            }
+            if (owner == previous_owner) {
+                owner_to_print = o_same_as_above                                         ;
+            } else {
+                owner_to_print = owner                                                   ;
+            }
 
-			previous_group = ""                                                             ;
-			previous_owner = ""                                                             ;
-			if (COL_OWNER%2) { COL_OWNER++  }
-			if (COL_GROUP%2) { COL_GROUP++  }
-			g_same_as_above=sprintf(COLOR_BEGIN TEAL "%"(COL_GROUP/2)-1"s%s" COLOR_END, "", "\47\47")                               ;
-			o_same_as_above=sprintf(COLOR_BEGIN TEAL "%"(COL_OWNER/2)-1"s%s%"(COL_OWNER/2)-1"s" COLOR_END, "", "\47\47", "")        ;
-
-			# to ease the ORACLE_HOME sorting
-			for (x in oh_list) {
-				to_print[oh_list[x]] = x                                                ;
-			}
-			for (i=1; i<=oh_ref; i++) {
-				# to ease the naming
-				the_oh=to_print[i]                                                      ;
-				 owner=o_list[to_print[i]]                                              ;
-				 group=g_list[to_print[i]]                                              ;
-				if (group == previous_group) {  group_to_print = g_same_as_above        ;       } else {        group_to_print = group  ;       }
-				if (owner == previous_owner) {  owner_to_print = o_same_as_above        ;       } else {        owner_to_print = owner  ;       }
-
-				printf("\t%2d : %-"COL_OH"s\t%-"COL_OWNER"s %s\n", i, the_oh, owner_to_print, group_to_print) ;
-				previous_group = group                                                  ;
-				previous_owner = owner                                                  ;
-			}
-		}
-		printf ("\n")                                                                           ;
-		print_legend_disabled(INSTANCE_DISABLED, "Instance")                                    ;
-		print_legend_recent_restarted()                                                         ;
-		print_legend_status_issue()                                                             ;
+            printf("\t%2d : %-"COL_OH"s\t%-"COL_OWNER"s %s\n", i, the_oh, owner_to_print, group_to_print) ;
+            previous_group = group                                                       ;
+            previous_owner = owner                                                       ;
+        }
+    }
+    printf ("\n")                                                                        ;
+    print_legend_disabled(INSTANCE_DISABLED, "Instance")                                 ;
+    print_legend_recent_restarted()                                                      ;
+    print_legend_status_issue()                                                          ;
 } ' $TMP | ${AWK} -v GREP="$GREP" -v UNGREP="$UNGREP" ' BEGIN {FS="|"}                                              # AWK used to grep and ungrep
-	      {         if ((NF >= 3) && ($(NF-1) !~ /Type/) && ($2 !~ /Service/)) {
-			        if (($0 ~ GREP) && ($0 !~ UNGREP)) {
-					print $0                                                        ;
-				}
-			} else {
-				print  $0                                                               ;
-			}
-		}' | sed s'/^/  /'              > ${TMP2}                       # We can reuse TMP2 here
+           {    if ((NF >= 3) && ($(NF-1) !~ /Type/) && ($2 !~ /Service/)) {
+                    if (($0 ~ GREP) && ($0 !~ UNGREP)) {
+                        print $0                                                         ;
+                    }
+                } else {
+                   print  $0                                                             ;
+                }
+           }' | sed s'/^/  /'              > ${TMP2}                       # We can reuse TMP2 here
 
 #
 # Special sort order (option -c)
