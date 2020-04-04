@@ -930,57 +930,55 @@ END {       #
        RECENT_RESTARTED=0                                                               ;
        printf("\n")                                                                     ;
     } # End of listeners
-		# ici
-		# Services
-		#
-		if (length(tab_svc) > 0)                # We print only if we have something to show
-		{
-			# A header for the services
-			printf("%s", center("DB"      ,  COL_DB, WHITE, COL_SEP))                       ;
-			printf("%s", center("Service" ,  COL_VER+1, WHITE, COL_SEP))                    ;
-			n=asort(nodes)                                                                  ;       # sort array nodes
-			for (i = 1; i <= n; i++) {
-				printf("%s", center(nodes[i], COL_NODE, WHITE, COL_SEP))                ;
-			}
-			printf("\n")
+    # 
+    # Services
+    #
+    if (length(tab_svc) > 0) {                # We print only if we have something to show
+        # A header for the services
+        printf("%s", center("DB"      ,  COL_DB, WHITE, COL_SEP))                       ;
+        printf("%s", center("Service" ,  COL_VER+1, WHITE, COL_SEP))                    ;
+        n=asort(nodes)                                                                  ;       # sort array nodes
 
-			# a "---" line under the header
-			print_a_line(COL_DB+COL_NODE*n+COL_VER+n+2)                                     ;
+        for (i = 1; i <= n; i++) {
+            printf("%s", center(nodes[i], COL_NODE, WHITE, COL_SEP))                    ;
+        }
+        printf("\n")
 
-			# Print the Services
-			x=asorti(tab_svc, svc_sorted)                                                   ;
-			for (j = 1; j <= x; j++)
-			{       split(svc_sorted[j], to_print, ".")                                     ;       # The service we have is <db_name>.<service_name>
-				service = svc_sorted[j]                                                 ;
-				sub(/^[^.]*\./, "", service)                                            ;       # Remove the DB name only
-				if (previous_db != to_print[1])                                                 # Do not duplicate the DB names on the output
-				{
-					printf(COLOR_BEGIN WHITE " %-"COL_DB-1"s" COLOR_END COL_SEP, to_print[1], WHITE);     # Database
-					previous_db = to_print[1]                                       ;
-				}else {
-					printf("%s", center("",  COL_DB, WHITE, COL_SEP))               ;
-				}
-				printf(COLOR_BEGIN WHITE " %-"COL_VER"s" COLOR_END"|", service, WHITE);     # Service
+        # a "---" line under the header
+        print_a_line(COL_DB+COL_NODE*n+COL_VER+n+2)                                     ;
 
-				for (i = 1; i <= n; i++)
-				{
-					dbstatus =           status[svc_sorted[j],nodes[i]]             ;
-					dbtarget =           target[svc_sorted[j],nodes[i]]             ;
-					dbdetail =   status_details[svc_sorted[j],nodes[i]]             ;
-					if ((started[svc_sorted[j],nodes[i]] < DIFF_HOURS) && (started[svc_sorted[j],nodes[i]]))
-					{         COL_ONLINE=WITH_BACK                                  ;
-						   COL_OTHER=WITH_BACK                                  ;
-					    RECENT_RESTARTED=1                                          ;
-					} else {
-						  COL_ONLINE=GREEN                                      ;
-						   COL_OTHER=RED                                        ;
-					}
-					if (dbstatus != dbtarget)
-					{
-						  COL_ONLINE=WITH_BACK2                                 ;
-						   COL_OTHER=WITH_BACK2                                 ;
-						STATUS_ISSUE=1                                          ;
-					}
+        # Print the Services
+        x=asorti(tab_svc, svc_sorted)                                                   ;
+        for (j = 1; j <= x; j++) {
+            split(svc_sorted[j], to_print, ".")                                         ; # The service we have is <db_name>.<service_name>
+            service = svc_sorted[j]                                                     ;
+            sub(/^[^.]*\./, "", service)                                                ; # Remove the DB name only
+
+            if (previous_db != to_print[1]) {                                             # Do not duplicate the DB names on the output
+                printf(COLOR_BEGIN WHITE " %-"COL_DB-1"s" COLOR_END COL_SEP, to_print[1], WHITE);     # Database
+                previous_db = to_print[1]                                               ;
+            } else {
+                printf("%s", center("",  COL_DB, WHITE, COL_SEP))                       ;
+            }
+            printf(COLOR_BEGIN WHITE " %-"COL_VER"s" COLOR_END"|", service, WHITE)      ; # Service
+
+            for (i = 1; i <= n; i++) {
+                dbstatus =           status[svc_sorted[j],nodes[i]]                     ;
+                dbtarget =           target[svc_sorted[j],nodes[i]]                     ;
+                dbdetail =   status_details[svc_sorted[j],nodes[i]]                     ;
+                if ((started[svc_sorted[j],nodes[i]] < DIFF_HOURS) && (started[svc_sorted[j],nodes[i]])) {
+                          COL_ONLINE=WITH_BACK                                          ;
+                           COL_OTHER=WITH_BACK                                          ;
+                    RECENT_RESTARTED=1                                                  ;
+                } else {
+                    COL_ONLINE=GREEN                                                    ;
+                     COL_OTHER=RED                                                      ;
+                }
+                if (dbstatus != dbtarget) {
+	              COL_ONLINE=WITH_BACK2                                             ;
+	               COL_OTHER=WITH_BACK2                                             ;
+	            STATUS_ISSUE=1                                                      ;
+                } # ici
 					if (is_enabled[svc_sorted[j],nodes[i]] == 0)                            # Service disabled
 					{
 						SERVICE_DISABLED = 1                                    ;
