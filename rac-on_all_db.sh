@@ -59,7 +59,9 @@ for X in `crsctl stat res -v -w "TYPE = ora.database.type" |\
 do
               DB=`echo $X | awk -F "|" '{print $1}'`
           SERVER=`echo $X | awk -F "|" '{print $2}'`
-        INSTANCE=${DB}`echo "${SERVER: -1}"`
+            TEMP=`echo $SERVER | sed s'/vm.*$//'`
+        INSTANCE=${DB}`echo "${TEMP: -1}"`
+#        INSTANCE=${DB}`echo "${SERVER: -1}"`
 
         printf "\n\n\t\t\033[1;37m%30s\033[m\n" "Query Result on $INSTANCE@$SERVER"
 
