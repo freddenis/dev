@@ -607,13 +607,13 @@ function print_a_line(size) {
                     match($2, /1[0-9]\.[0-9]\.?[0-9]?\.?[0-9]?/)                                     ;       # Grab the version from the OH path)
                     VERSION = substr($2,RSTART,RLENGTH)                                              ;
                 }
-                if ($1 == "DATABASE_TYPE") {                                                                     # RAC / RACOneNode / Single Instance are expected here
+                if ($1 == "DATABASE_TYPE") {                                                                 # RAC / RACOneNode / Single Instance are expected here
                     dbtype[DB] = $2                                                                  ;
                 }
-                if ($1 == "ROLE") {                                                                              # Primary / Standby expected here
+                if ($1 == "ROLE") {                                                                          # Primary / Standby expected here
                     role[DB] = $2                                                                    ;
                 }
-                if ($1 == "ENABLED") {                                                                           # Instance is enabled (1) or disabled (0)
+                if ($1 == "ENABLED") {                                                                       # Instance is enabled (1) or disabled (0)
                     enabled = $2                                                                     ;       # Save it for later
                 }
                 if ($1 == "GEN_USR_ORA_INST_NAME") {
@@ -625,6 +625,10 @@ function print_a_line(size) {
                             is_enabled[DB,$1] = enabled                                              ;
                             break                                                                    ;
                         }
+                        if ($0 ~ /^$/) {
+                            break                                                                    ;
+                        }
+
                     }
                 }
                 if ($0 ~ /^$/) {
