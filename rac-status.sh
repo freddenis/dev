@@ -8,10 +8,13 @@
 # Please have a look at http://bit.ly/2MFkzDw  for some details and screenshots
 # The latest version of the script can be downloaded here : http://bit.ly/2XEXa6j
 #
-# The current script version is 20200317
+# The current script version is 20200413
 #
 # History :
 #
+# 20200413 - Fred Denis - Fixed a bug with offline resources in green for the tech resources
+#                       - Fixed a bug with disabled instances
+#                       - Indentation
 # 20200317 - Fred Denis - A new -t option (included in -a) which shows the tech resources (DGs, vips, etc ...)
 #                         Also provide insights to the user if we cannot find an ASM entry in oratab as oraenv wont work
 # 20200305 - Fred Denis - Fixed a bug when the hostname contains twice the cluster name
