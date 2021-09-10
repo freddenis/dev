@@ -120,6 +120,8 @@ WITH_COLORS="YES"                                                         # Outp
 # ./rac-status.sh -h for more information
   SHOW_DB="YES"                 # Databases
  #SHOW_DB="NO"
+ SHOW_PDB="YES"                 # PDBs
+#SHOW_PDB="NO"
 SHOW_LSNR="YES"                 # Listeners
 #SHOW_LSNR="NO"
  SHOW_SVC="YES"                 # Services
@@ -217,6 +219,7 @@ END
                         $ ./rac-status.sh -a -s                         # Show everything but the services (then the listeners and the databases)
 
         -d        Revert the behavior defined by SHOW_DB  ; if SHOW_DB   is set to YES to show the databases by default, then the -d option will hide the databases
+        -p        Revert the behavior defined by SHOW_PDB ; if SHOW_PDB  is set to YES to show the databases by default, then the -p option will hide the PDBs
         -l        Revert the behavior defined by SHOW_LSNR; if SHOW_LSNR is set to YES to show the listeners by default, then the -l option will hide the listeners
         -s        Revert the behavior defined by SHOW_SVC ; if SHOW_SVC  is set to YES to show the services  by default, then the -s option will hide the services
         -t        Revert the behavior defined by SHOW_TECH; if SHOW_TECH is set to YES to show the tech resources  by default, then the -t option will hide the tech resources
@@ -276,11 +279,12 @@ exit 123
 #
 # Options
 #
-while getopts "andslLhg:v:o:f:eruw:c:tkKVD:S:" OPT; do
+while getopts "andpslLhg:v:o:f:eruw:c:tkKVD:S:" OPT; do
     case ${OPT} in
     a)         SHOW_DB="YES"        ; SHOW_LSNR="YES"       ; SHOW_SVC="YES";       SHOW_TECH="YES" ;;
     n)         SHOW_DB="NO"         ; SHOW_LSNR="NO"        ; SHOW_SVC="NO" ;       SHOW_TECH="NO"  ;;
     d)         if [[ "${SHOW_DB}"   == "YES" ]]; then   SHOW_DB="NO"; else   SHOW_DB="YES"; fi      ;;
+    p)         if [[ "${SHOW_PDB}"  == "YES" ]]; then  SHOW_PDB="NO"; else  SHOW_PDB="YES"; fi      ;;
     s)         if [[ "${SHOW_SVC}"  == "YES" ]]; then  SHOW_SVC="NO"; else  SHOW_SVC="YES"; fi      ;;
     l)         if [[ "${SHOW_LSNR}" == "YES" ]]; then SHOW_LSNR="NO"; else SHOW_LSNR="YES"; fi      ;;
     t)         if [[ "${SHOW_TECH}" == "YES" ]]; then SHOW_TECH="NO"; else SHOW_TECH="YES"; fi      ;;
@@ -431,15 +435,22 @@ if [[ -z "$FILE" ]]; then               # This is not needed when using an input
     if [[ -n "${LISTDB}" ]]; then                               # A list of DB is specified with the -D option
         for X in $(echo "${LISTDB}" | sed s'/,/ /g'); do
             [[ -n "${DBCRSFILTER}" ]] && DBCRSFILTER="${DBCRSFILTER} or"
-            DBCRSFILTER="${DBCRSFILTER} (NAME = ora.${X}.db)"
+             DBCRSFILTER="${DBCRSFILTER} (NAME = ora.${X}.db)"
+            PDBCRSFILTER="${DBCRSFILTER} (NAME = ora.${X}.db)"
         done 
-        DBCRSFILTER="(TYPE = ora.database.type) AND ${DBCRSFILTER}"
+         DBCRSFILTER="(TYPE = ora.database.type) AND ${DBCRSFILTER}"
+        PDBCRSFILTER="(TYPE = ora.pdb.type) AND ${DBCRSFILTER}"
     else                                                        # No specific Db list specified
-        DBCRSFILTER="TYPE = ora.database.type"
+         DBCRSFILTER="TYPE = ora.database.type"
+        PDBCRSFILTER="TYPE = ora.pdb.type"
     fi
     if [[ "${SHOW_DB}" == "YES" ]]; then
         crsctl stat res -p -w "${DBCRSFILTER}"                  >> "${TMP}"
         crsctl stat res -v -w "${DBCRSFILTER}"                  >> "${TMP}"
+    fi
+    if [[ "${SHOW_PDB}" == "YES" ]]; then
+        crsctl stat res -p -w "${PDBCRSFILTER}"                 >> "${TMP}"
+        crsctl stat res -v -w "${PDBCRSFILTER}"                 >> "${TMP}"
     fi
     if [[ "${SHOW_LSNR}" == "YES" ]]; then
         crsctl stat res -v -w "TYPE = ora.listener.type"        >> "${TMP}"
@@ -615,6 +626,30 @@ function print_a_line(size) {
     for (k=1; k<=size; k++) {printf("%s", "-");}                                                      ;       # n = number of nodes
     printf("%s", COLOR_END"\n")                                                                       ;
 }
+#
+# Set colors depending on the recently restarted date and dbstatus and dbtarget
+#
+function set_color_status(i_db, i_node) {
+	if ((started[i_db,i_node] < DIFF_HOURS) && (started[i_db,i_node])) {
+		    COL_OPEN=WITH_BACK                                           ;
+		COL_READONLY=WITH_BACK                                           ;
+		    COL_SHUT=WITH_BACK                                           ;
+		   COL_OTHER=WITH_BACK                                           ;
+	    RECENT_RESTARTED=1                                                   ;
+	} else  {
+		    COL_OPEN=GREEN                                               ;
+		COL_READONLY=WHITE                                               ;
+		    COL_SHUT=YELLOW                                              ;
+		   COL_OTHER=RED                                                 ;
+	}
+	if (dbstatus != dbtarget) {
+		    COL_OPEN=WITH_BACK2                                          ;
+		COL_READONLY=WITH_BACK2                                          ;
+		    COL_SHUT=WITH_BACK2                                          ;
+		   COL_OTHER=WITH_BACK2                                          ;
+		STATUS_ISSUE=1                                                   ;
+	}
+}
 { # Fill 2 tables with the OH and the version from "crsctl stat res -p -w "TYPE = ora.database.type""
     if ($1 == "NAME") {
         sub("^ora.", "", $2)                                                                          ;
@@ -744,6 +779,24 @@ function print_a_line(size) {
                     pdb[temppdb[1]][temppdb[2]] = $2                                                  ;
                     delete temppdb ;
                     print temppdb[1],temppdb[2], pdb[temppdb[1]][temppdb[2]] ;
+                }
+                if ($1 == "ENABLED") {                                                                       # Instance is enabled (1) or disabled (0)
+                    enabled = $2                                                                     ;       # Save it for later
+                }
+                if ($1 == "GEN_USR_ORA_INST_NAME") {
+                    instance = $2                                                                    ;
+                    while (getline) {
+                        if (($1 ~ /^GEN_USR_ORA_INST_NAME@SERVERNAME/) && ($2 == instance)) {
+                            sub("GEN_USR_ORA_INST_NAME@SERVERNAME[(]", "", $1)                       ;
+                            sub(")", "", $1)                                                         ;
+                            is_enabled[DB,$1] = enabled                                              ;
+                            #break                                                                    ;
+                        }
+                        if ($0 ~ /^$/) {
+                            break                                                                    ;
+                        }
+
+                    }
                 }
                 if ($0 ~ /^$/) {
                     break                                                                            ;
@@ -1211,25 +1264,26 @@ END {       #
                 #
                 # Print the status here, all that are not listed in that if ladder will appear in RED
                 #
-                if ((started[l_db,l_node] < DIFF_HOURS) && (started[l_db,l_node])) {
-                            COL_OPEN=WITH_BACK                                           ;
-                        COL_READONLY=WITH_BACK                                           ;
-                            COL_SHUT=WITH_BACK                                           ;
-                           COL_OTHER=WITH_BACK                                           ;
-                    RECENT_RESTARTED=1                                                   ;
-                } else  {
-                            COL_OPEN=GREEN                                               ;
-                        COL_READONLY=WHITE                                               ;
-                            COL_SHUT=YELLOW                                              ;
-                           COL_OTHER=RED                                                 ;
-                }
-                if (dbstatus != dbtarget) {
-                            COL_OPEN=WITH_BACK2                                          ;
-                        COL_READONLY=WITH_BACK2                                          ;
-                            COL_SHUT=WITH_BACK2                                          ;
-                           COL_OTHER=WITH_BACK2                                          ;
-                        STATUS_ISSUE=1                                                   ;
-                }
+                set_color_status(l_db, l_node)                                           ;
+#                if ((started[l_db,l_node] < DIFF_HOURS) && (started[l_db,l_node])) {
+#                            COL_OPEN=WITH_BACK                                           ;
+#                        COL_READONLY=WITH_BACK                                           ;
+#                            COL_SHUT=WITH_BACK                                           ;
+#                           COL_OTHER=WITH_BACK                                           ;
+#                    RECENT_RESTARTED=1                                                   ;
+#                } else  {
+#                            COL_OPEN=GREEN                                               ;
+#                        COL_READONLY=WHITE                                               ;
+#                            COL_SHUT=YELLOW                                              ;
+#                           COL_OTHER=RED                                                 ;
+#                }
+#                if (dbstatus != dbtarget) {
+#                            COL_OPEN=WITH_BACK2                                          ;
+#                        COL_READONLY=WITH_BACK2                                          ;
+#                            COL_SHUT=WITH_BACK2                                          ;
+#                           COL_OTHER=WITH_BACK2                                          ;
+#                        STATUS_ISSUE=1                                                   ;
+#                }
                 if ((is_enabled[l_db,l_node] == 0) && (is_enabled[l_db,l_node] != "")) { # Instance disabled
                     INSTANCE_DISABLED = 1                                                ;
                     right = int((COL_NODE - length(dbdetail)) / 2)                       ;
@@ -1283,8 +1337,9 @@ END {       #
                     l_node   = nodes[i]                                                  ;   # More readable
                     pdbstatus =           status[l_dbpdb,l_node]                         ;
                     pdbtarget =           target[l_dbpdb,l_node]                         ;
-                    COLOR_PDB=RED ;
-                    if (tolower(pdbstatus) == "online") {COLOR_PDB=GREEN}                ;
+                    set_color_status(l_dbpdb, l_node)                                    ;
+                    COLOR_PDB=COL_OTHER ;
+                    if (tolower(pdbstatus) == "online") {COLOR_PDB=COL_ONLINE}           ;
                     printf("%s", center(nice_case(pdbstatus), COL_NODE, COLOR_PDB, COL_SEP)) ;
                 }
                 printf("%s", center("PDB", COL_TYPE, ROLE_COLOR, COL_SEP)) ;
