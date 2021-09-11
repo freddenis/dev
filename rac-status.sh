@@ -1323,29 +1323,33 @@ END {       #
             }
             printf("%s", center(dbtype[l_db] ROLE_SHORT, COL_TYPE, ROLE_COLOR, COL_SEP)) ;
             printf("\n")                                                                 ;
+            #
             # PDBs
-            #print "==>"l_db ;
-            for (x in pdb[l_db]) {tempopdb[x]=x;} ;
-            z=asort(tempopdb,pdb_sorted) ;
-            for (p=1; p<=z; p++) {     # For each PDB
-#                print "------"pdb_sorted[p]
-                l_pdb = pdb_sorted[p] ;
-                l_dbpdb = l_db"."l_pdb ;
-                printf(COLOR_BEGIN COLOR_DB "  %-"COL_DB-2"s" COLOR_END"|", l_pdb )      ;   # PDB
-                printf(COLOR_BEGIN WHITE " %-"COL_VER"s" COLOR_END"|", "", COL_VER)      ;   # Version
-                for (i = 1; i <= n; i++) {                                                   # For each node
-                    l_node   = nodes[i]                                                  ;   # More readable
-                    pdbstatus =           status[l_dbpdb,l_node]                         ;
-                    pdbtarget =           target[l_dbpdb,l_node]                         ;
-                    set_color_status(l_dbpdb, l_node)                                    ;
-                    COLOR_PDB=COL_OTHER ;
-                    if (tolower(pdbstatus) == "online") {COLOR_PDB=COL_ONLINE}           ;
-                    printf("%s", center(nice_case(pdbstatus), COL_NODE, COLOR_PDB, COL_SEP)) ;
-                }
-                printf("%s", center("PDB", COL_TYPE, ROLE_COLOR, COL_SEP)) ;
-                printf("\n")                                                             ;
-            } # End for each PDB
-            delete tempopdb ;
+            #
+            if (length(pdb[l_db]) > 0) {              # Only if there are PDBs
+                #print "==>"l_db ;
+                for (x in pdb[l_db]) {tempopdb[x]=x;} ;
+                z=asort(tempopdb,pdb_sorted) ;
+                for (p=1; p<=z; p++) {     # For each PDB
+#                    print "------"pdb_sorted[p]
+                    l_pdb = pdb_sorted[p] ;
+                    l_dbpdb = l_db"."l_pdb ;
+                    printf(COLOR_BEGIN COLOR_DB "  %-"COL_DB-2"s" COLOR_END"|", l_pdb )      ;   # PDB
+                    printf(COLOR_BEGIN WHITE " %-"COL_VER"s" COLOR_END"|", "", COL_VER)      ;   # Version
+                    for (i = 1; i <= n; i++) {                                                   # For each node
+                        l_node   = nodes[i]                                                  ;   # More readable
+                        pdbstatus =           status[l_dbpdb,l_node]                         ;
+                        pdbtarget =           target[l_dbpdb,l_node]                         ;
+                        set_color_status(l_dbpdb, l_node)                                    ;
+                        COLOR_PDB=COL_OTHER ;
+                        if (tolower(pdbstatus) == "online") {COLOR_PDB=COL_ONLINE}           ;
+                        printf("%s", center(nice_case(pdbstatus), COL_NODE, COLOR_PDB, COL_SEP)) ;
+                    }
+                    printf("%s", center("PDB", COL_TYPE, ROLE_COLOR, COL_SEP)) ;
+                    printf("\n")                                                             ;
+                } # End for each PDB
+                delete tempopdb ;
+             } # End of PDBs
         }
 
         # a "---" line as a footer
