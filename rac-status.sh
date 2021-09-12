@@ -631,18 +631,20 @@ function print_a_line(size) {
 # Set colors depending on the recently restarted date and dbstatus and dbtarget
 #
 function set_color_status(i_db, i_node) {
-        print "started"i_db":"i_node":"started[i_db,i_node] ;
-	if ((started[i_db,i_node] < DIFF_HOURS) && (started[i_db,i_node])) {
+#        print "started"i_db":"i_node":"started[i_db,i_node]"xxx"DIFF_HOURS ;
+	if ((started[i_db,i_node] < DIFF_HOURS) && (started[i_db,i_node] != "")) {
 		    COL_OPEN=WITH_BACK                                           ;
 		COL_READONLY=WITH_BACK                                           ;
 		    COL_SHUT=WITH_BACK                                           ;
 		   COL_OTHER=WITH_BACK                                           ;
 	    RECENT_RESTARTED=1                                                   ;
+#           print "ici yes" ;
 	} else  {
 		    COL_OPEN=GREEN                                               ;
 		COL_READONLY=WHITE                                               ;
 		    COL_SHUT=YELLOW                                              ;
 		   COL_OTHER=RED                                                 ;
+#           print "ici whyyy" ;
 	}
 	if (dbstatus != dbtarget) {
 		    COL_OPEN=WITH_BACK2                                          ;
@@ -651,6 +653,7 @@ function set_color_status(i_db, i_node) {
 		   COL_OTHER=WITH_BACK2                                          ;
 		STATUS_ISSUE=1                                                   ;
 	}
+#        print "========"COL_OPEN":"COL_SHUT ;
 }
 { # Fill 2 tables with the OH and the version from "crsctl stat res -p -w "TYPE = ora.database.type""
     if ($1 == "NAME") {
@@ -1359,7 +1362,7 @@ END {       #
                         } else {
                             printf("%s", center(nice_case(pdbstatus), COL_NODE, COLOR_PDB, COL_SEP)) ;
                         }
-                         print "==>"l_dbpdb":"pdbstatus":"is_enabled[l_dbpdb,l_node]
+                       #  print "==>"l_dbpdb":"pdbstatus":"is_enabled[l_dbpdb,l_node]
                     }
                     printf("%s", center("PDB", COL_TYPE, ROLE_COLOR, COL_SEP)) ;
                     printf("\n")                                                             ;
