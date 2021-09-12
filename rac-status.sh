@@ -664,6 +664,7 @@ function set_color_status(i_db, i_node) {
     if ($2 ~ /\.pdb$/) {                                                                                 # PDBs
         type            = "PDB"                                                                       ;
         sub(".pdb$",  "", $2)                                                                         ;
+        DBPDB           = $2                                                                          ;
     }
     if ($2 ~ /\.lsnr/) {                                                                                 # Listeners
         sub(".lsnr$", "", $2)                                                                         ;
@@ -776,10 +777,10 @@ function set_color_status(i_db, i_node) {
             while(getline) {
                 if ($1 == "PDB_NAME") {
                     PDB = $2                                                                          ;
-                    split(DB, temppdb, ".")      ; # Here, DB = dbname.pdbname
+                    split(DBPDB, temppdb, ".")                                                        ; # Here, DB = dbname.pdbname
                     pdb[temppdb[1]][temppdb[2]] = PDB                                                 ;
-                    delete temppdb ;
-                    print temppdb[1],temppdb[2], pdb[temppdb[1]][temppdb[2]] ;
+                    delete temppdb                                                                    ;
+                    print temppdb[1],temppdb[2], pdb[temppdb[1]][temppdb[2]]                          ;
                 }
                 if ($1 == "ENABLED") {                                                                      # Service is enabled (1) or disabled (0)
                     for (i=1; i<=n; i++) {                                                                  # n = number of nodes
@@ -899,7 +900,8 @@ function set_color_status(i_db, i_node) {
                 if (length(status[DB,SERVER]) > COL_NODE) { COL_NODE = length(status[DB,SERVER]) + COL_NODE_OFFSET;}
             }
             if ($1 == "TARGET")             {       target[DB,SERVER]=$2                    ;}
-            if ($1 == "LAST_RESTART")       {       if (type == "PDB") {started[PDB,SERVER]=diff_hours($2" "$3)  ; #print "pdb" started[PDB,SERVER]"B" ;
+            if ($1 == "LAST_RESTART")       {       #print "--------"DBPDB ;
+                                                    if (type == "PDB") {started[DBPDB,SERVER]=diff_hours($2" "$3)  ; #print "pdb" started[PDB,SERVER]"B" ;
                                                     } else             {started[DB,SERVER]=diff_hours($2" "$3)   ; #print "db" started[DB,SERVER]"B" ;
                                                     }
                                                  #   print "aaaaaaaa"type":"$2" "$3 ;
@@ -1357,6 +1359,7 @@ END {       #
                         } else {
                             printf("%s", center(nice_case(pdbstatus), COL_NODE, COLOR_PDB, COL_SEP)) ;
                         }
+                         print "==>"l_dbpdb":"pdbstatus":"is_enabled[l_dbpdb,l_node]
                     }
                     printf("%s", center("PDB", COL_TYPE, ROLE_COLOR, COL_SEP)) ;
                     printf("\n")                                                             ;
