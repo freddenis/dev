@@ -568,10 +568,11 @@ function in_color(str, color) {
 #
 function diff_hours(a_date) {
     if ((a_date == "NEVER ") || (a_date == " ")) {
-        return (999999999999999999999)                                                                ;
+        return 999999                                                                                ;
     } else {
-        split(a_date, temp, /[\/ :]/)                                                                 ;
-        return (systime()-mktime (temp[3]" "temp[1]" "temp[2]" "temp[4]" "temp[5]" "temp[6]))/(60*60) ;
+        split(a_date, temp, /[\/ :]/)                                                                ;
+        #return (systime()-mktime(temp[3]" "temp[1]" "temp[2]" "temp[4]" "temp[5]" "temp[6]))/(60*60) ;
+        return sprintf("%d", (systime()-mktime(temp[3]" "temp[1]" "temp[2]" "temp[4]" "temp[5]" "temp[6]))/(60*60)) ;
     }
 }
 #
@@ -630,6 +631,7 @@ function print_a_line(size) {
 # Set colors depending on the recently restarted date and dbstatus and dbtarget
 #
 function set_color_status(i_db, i_node) {
+        print "started"i_db":"i_node":"started[i_db,i_node] ;
 	if ((started[i_db,i_node] < DIFF_HOURS) && (started[i_db,i_node])) {
 		    COL_OPEN=WITH_BACK                                           ;
 		COL_READONLY=WITH_BACK                                           ;
@@ -662,7 +664,6 @@ function set_color_status(i_db, i_node) {
     if ($2 ~ /\.pdb$/) {                                                                                 # PDBs
         type            = "PDB"                                                                       ;
         sub(".pdb$",  "", $2)                                                                         ;
-        #sub(".*$",  "", $2)                                                                         ;
     }
     if ($2 ~ /\.lsnr/) {                                                                                 # Listeners
         sub(".lsnr$", "", $2)                                                                         ;
@@ -746,7 +747,7 @@ function set_color_status(i_db, i_node) {
                             sub("GEN_USR_ORA_INST_NAME@SERVERNAME[(]", "", $1)                       ;
                             sub(")", "", $1)                                                         ;
                             is_enabled[DB,$1] = enabled                                              ;
-                            #break                                                                    ;
+                            break                                                                    ;
                         }
                         if ($0 ~ /^$/) {
                             break                                                                    ;
@@ -774,32 +775,28 @@ function set_color_status(i_db, i_node) {
         if (type == "PDB") {
             while(getline) {
                 if ($1 == "PDB_NAME") {
-#                    pdb[DB] = $2                                                                     ;      # PDB_NAME
+                    PDB = $2                                                                          ;
                     split(DB, temppdb, ".")      ; # Here, DB = dbname.pdbname
-                    pdb[temppdb[1]][temppdb[2]] = $2                                                  ;
+                    pdb[temppdb[1]][temppdb[2]] = PDB                                                 ;
                     delete temppdb ;
                     print temppdb[1],temppdb[2], pdb[temppdb[1]][temppdb[2]] ;
                 }
-                if ($1 == "ENABLED") {                                                                       # Instance is enabled (1) or disabled (0)
-                    enabled = $2                                                                     ;       # Save it for later
-                }
-                if ($1 == "GEN_USR_ORA_INST_NAME") {
-                    instance = $2                                                                    ;
-                    while (getline) {
-                        if (($1 ~ /^GEN_USR_ORA_INST_NAME@SERVERNAME/) && ($2 == instance)) {
-                            sub("GEN_USR_ORA_INST_NAME@SERVERNAME[(]", "", $1)                       ;
-                            sub(")", "", $1)                                                         ;
-                            is_enabled[DB,$1] = enabled                                              ;
-                            #break                                                                    ;
+                if ($1 == "ENABLED") {                                                                      # Service is enabled (1) or disabled (0)
+                    for (i=1; i<=n; i++) {                                                                  # n = number of nodes
+                        is_enabled[DB,nodes[i]]= $2                                                   ;
+                    }
+                    while(getline) {
+                        if ($1 ~ /ENABLED@SERVERNAME/ ) {
+                            sub("ENABLED@SERVERNAME[(]", "", $1)                                      ;
+                            sub(")", "", $1)                                                          ;
+                            is_enabled[DB,$1] = $2                                                    ;
+                        } else  {
+                            break                                                                     ;
                         }
-                        if ($0 ~ /^$/) {
-                            break                                                                    ;
-                        }
-
                     }
                 }
                 if ($0 ~ /^$/) {
-                    break                                                                            ;
+                    break                                                                             ;
                 }
             }
         }       # End if (type == "PDB")
@@ -902,7 +899,11 @@ function set_color_status(i_db, i_node) {
                 if (length(status[DB,SERVER]) > COL_NODE) { COL_NODE = length(status[DB,SERVER]) + COL_NODE_OFFSET;}
             }
             if ($1 == "TARGET")             {       target[DB,SERVER]=$2                    ;}
-            if ($1 == "LAST_RESTART")       {       started[DB,SERVER]=diff_hours($2" "$3)  ;}
+            if ($1 == "LAST_RESTART")       {       if (type == "PDB") {started[PDB,SERVER]=diff_hours($2" "$3)  ; #print "pdb" started[PDB,SERVER]"B" ;
+                                                    } else             {started[DB,SERVER]=diff_hours($2" "$3)   ; #print "db" started[DB,SERVER]"B" ;
+                                                    }
+                                                 #   print "aaaaaaaa"type":"$2" "$3 ;
+                                            }
             if ($1 == "STATE_DETAILS")      {       NB++                                    ;       # Number of instances we came through
                 if (DB ~ /acfs/)            {       sub ("mounted on ", "", $2)             ;      
                                                     tempdb=tolower(DB)                      ;
@@ -914,12 +915,12 @@ function set_color_status(i_db, i_node) {
                 sub("STATE_DETAILS=", "", $0)           ;
                 sub(",HOME=.*$", "", $0)                ;       # Manage the 12cR2 new feature, check 20170606 for more details
                 sub("),.*$", ")", $0)                   ;       # To make clear multi status like "Mounted (Closed),Readonly,Open Initiated"
-                if ($0 == "Instance Shutdown")  {  status_details[DB,SERVER] = "Shutdown"       ;       } else
-                if ($0 ~  "Readonly")           {  status_details[DB,SERVER] = "Readonly"       ;       } else
-                if ($0 ~  "Abnormal Termination") {  status_details[DB,SERVER] = "Abnorm Term"       ;       } else
-                if ($0 ~  /Mount/)              {  status_details[DB,SERVER] = "Mounted"        ;       } else
-                if ($0 ~  /running from old/)   {  status_details[DB,SERVER] = "Open from old OH";      } else
-                                                {  if ($0 != "") {status_details[DB,SERVER] = $0};      }
+                if ($0 == "Instance Shutdown")    {  status_details[DB,SERVER] = "Shutdown"       ;       } else
+                if ($0 ~  "Readonly")             {  status_details[DB,SERVER] = "Readonly"       ;       } else
+                if ($0 ~  "Abnormal Termination") {  status_details[DB,SERVER] = "Abnorm Term"    ;       } else
+                if ($0 ~  /Mount/)                {  status_details[DB,SERVER] = "Mounted"        ;       } else
+                if ($0 ~  /running from old/)     {  status_details[DB,SERVER] = "Open from old OH";      } else
+                                                  {  if ($0 != "") {status_details[DB,SERVER] = $0};      }
                 if ((length(status_details[DB,SERVER]) > COL_NODE) && (type != "TECH")) {
                     COL_NODE = length(status_details[DB,SERVER]) + COL_NODE_OFFSET  ;
                 }
@@ -1291,7 +1292,6 @@ END {       #
                     if (length(dbdetail) < COL_DB+4) {
                         left--                                                           ;
                     }
-
                     if (dbdetail == "") {
                         printf("%s", center(DISABLED, COL_NODE, RED, COL_SEP ))          ;
                     } else if (dbdetail == "Open") {
@@ -1337,13 +1337,26 @@ END {       #
                     printf(COLOR_BEGIN COLOR_DB "  %-"COL_DB-2"s" COLOR_END"|", l_pdb )      ;   # PDB
                     printf(COLOR_BEGIN WHITE " %-"COL_VER"s" COLOR_END"|", "", COL_VER)      ;   # Version
                     for (i = 1; i <= n; i++) {                                                   # For each node
-                        l_node   = nodes[i]                                                  ;   # More readable
+                        l_node    = nodes[i]                                                 ;   # More readable
                         pdbstatus =           status[l_dbpdb,l_node]                         ;
                         pdbtarget =           target[l_dbpdb,l_node]                         ;
+#                        pdbdetail =   status_details[l_dbdbp,l_node]                         ;
                         set_color_status(l_dbpdb, l_node)                                    ;
+# ici
                         COLOR_PDB=COL_OTHER ;
-                        if (tolower(pdbstatus) == "online") {COLOR_PDB=COL_ONLINE}           ;
-                        printf("%s", center(nice_case(pdbstatus), COL_NODE, COLOR_PDB, COL_SEP)) ;
+                        if (tolower(pdbstatus) == "online"){ COLOR_PDB=COL_ONLINE }
+
+                        if ((is_enabled[l_dbpdb,l_node] == 0) && (is_enabled[l_dbpdb,l_node] != "")) { # Instance disabled
+                            INSTANCE_DISABLED = 1                                             ;
+                            right = int((COL_NODE - length(pdbstatus)) / 2)                   ;
+                            left  = COL_NODE - length(pdbstatus) - right                      ;
+                            if (length(pdbstatus) < COL_DB+4) {
+                                left--                                                        ;
+                            }
+                            printf("%"left"s%s %s%"right"s", "", in_color(nice_case(pdbstatus), COLOR_PDB), in_color(DISABLED, RED), COL_SEP);
+                        } else {
+                            printf("%s", center(nice_case(pdbstatus), COL_NODE, COLOR_PDB, COL_SEP)) ;
+                        }
                     }
                     printf("%s", center("PDB", COL_TYPE, ROLE_COLOR, COL_SEP)) ;
                     printf("\n")                                                             ;
@@ -1476,5 +1489,5 @@ fi
 rm -f "${TMP2}"
 
 #*********************************************************************************************************
-	#                               E N D     O F      S O U R C E
+#                               E N D     O F      S O U R C E
 #*********************************************************************************************************
