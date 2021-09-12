@@ -8,10 +8,13 @@
 # Please have a look at http://bit.ly/2MFkzDw  for some details and screenshots
 # The latest version of the script can be downloaded here : http://bit.ly/2XEXa6j
 #
-# The current script version is 20210714
+# The current script version is 20210912
 #
 # History :
 #
+# 20210912 - Fred Denis - Implement new GI 21c PDB status; also -p to show/hide PDBs, default is we show the PDBs
+#                         STATE_DETAILS does not seem to be implemented (yet ?) for PDBs so the only info we have
+#                         is Online/Offline, we do not know if PDBs are READ WRITE or READ ONLY -- SEED not here either
 # 20210908 - Fred Denis - Fixed a bad character next to cluster status with -u (no color) option
 # 20210825 - Fred Denis - Cluster upgrade status was causing an issue for HAS -- now fixed
 #                         There was some leftover color codes with -u option -- now fixed
@@ -281,8 +284,8 @@ exit 123
 #
 while getopts "andpslLhg:v:o:f:eruw:c:tkKVD:S:" OPT; do
     case ${OPT} in
-    a)         SHOW_DB="YES"        ; SHOW_LSNR="YES"       ; SHOW_SVC="YES";       SHOW_TECH="YES" ;;
-    n)         SHOW_DB="NO"         ; SHOW_LSNR="NO"        ; SHOW_SVC="NO" ;       SHOW_TECH="NO"  ;;
+    a)         SHOW_DB="YES"; SHOW_LSNR="YES"; SHOW_SVC="YES"; SHOW_TECH="YES"; SHOW_PDB="YES"      ;;
+    n)         SHOW_DB="NO" ; SHOW_LSNR="NO" ; SHOW_SVC="NO" ; SHOW_TECH="NO" ; SHOW_PDB="NO"       ;;
     d)         if [[ "${SHOW_DB}"   == "YES" ]]; then   SHOW_DB="NO"; else   SHOW_DB="YES"; fi      ;;
     p)         if [[ "${SHOW_PDB}"  == "YES" ]]; then  SHOW_PDB="NO"; else  SHOW_PDB="YES"; fi      ;;
     s)         if [[ "${SHOW_SVC}"  == "YES" ]]; then  SHOW_SVC="NO"; else  SHOW_SVC="YES"; fi      ;;
@@ -352,10 +355,6 @@ if [[ -z "$FILE" ]]; then               # This is not needed when using an input
     if [[ "${USE_ORAENV}" == "YES" ]]; then
         #
         # Set the ASM env to be able to use crsctl commands
-        #
-        #
-        # If oratab exists, we check if there is an ASM entry trying to know if oraenv will work -- if we cannot find an ASM entry
-        # in oratab, we try to point the user in the right direction to fix it
         #
         if [[ -f "${OLR}" ]]; then
             export ORACLE_HOME=$(cat "${OLR}" | grep "^crs_home" | awk -F "=" '{print $2}')
@@ -503,6 +502,11 @@ fi
          -v    ADVM_DEVICES="${ADVM_DEV}"        \
          -v    HIDE_DEVICES="${HIDE_DEV}"        \
          -v         LISTSVC="${LISTSVC}"         \
+         -v        SHOW_PDB="${SHOW_PDB}"        \
+         -v         SHOW_DB="${SHOW_DB}"         \
+         -v        SHOW_SVC="${SHOW_SVC}"        \
+         -v       SHOW_LSNR="${SHOW_LSNR}"       \
+         -v       SHOW_TECH="${SHOW_TECH}"       \
 'BEGIN\
 { FS = "="                                   ;
    n = split(NODES, nodes, ",")              ;       # Make a table with the nodes of the cluster
@@ -568,18 +572,18 @@ function in_color(str, color) {
 #
 function diff_hours(a_date) {
     if ((a_date == "NEVER ") || (a_date == " ")) {
-        return 999999                                                                                ;
+        return 999999999999                                                                          ;
     } else {
         split(a_date, temp, /[\/ :]/)                                                                ;
-        #return (systime()-mktime(temp[3]" "temp[1]" "temp[2]" "temp[4]" "temp[5]" "temp[6]))/(60*60) ;
         return sprintf("%d", (systime()-mktime(temp[3]" "temp[1]" "temp[2]" "temp[4]" "temp[5]" "temp[6]))/(60*60)) ;
+        delete temp                                                                                  ;
     }
 }
 #
 # Get a string and return it with a nice case: first character in upper case ad the others in lower case (ABCD => Abcd)
 #
 function nice_case(str) {
-    return sprintf("%s", toupper(substr(str,1,1)) tolower(substr(str,2,length(str))))               ;
+    return sprintf("%s", toupper(substr(str,1,1)) tolower(substr(str,2,length(str))))                ;
 }
 #
 # Print a legend for the recent restarted instances, listeners and services
@@ -630,30 +634,26 @@ function print_a_line(size) {
 #
 # Set colors depending on the recently restarted date and dbstatus and dbtarget
 #
-function set_color_status(i_db, i_node) {
-#        print "started"i_db":"i_node":"started[i_db,i_node]"xxx"DIFF_HOURS ;
-	if ((started[i_db,i_node] < DIFF_HOURS) && (started[i_db,i_node] != "")) {
+function set_color_status(i_db, i_node, i_status, i_target) {
+	if ((started[i_db,i_node] < DIFF_HOURS) && (started[i_db,i_node])) {
 		    COL_OPEN=WITH_BACK                                           ;
 		COL_READONLY=WITH_BACK                                           ;
 		    COL_SHUT=WITH_BACK                                           ;
 		   COL_OTHER=WITH_BACK                                           ;
 	    RECENT_RESTARTED=1                                                   ;
-#           print "ici yes" ;
 	} else  {
 		    COL_OPEN=GREEN                                               ;
 		COL_READONLY=WHITE                                               ;
 		    COL_SHUT=YELLOW                                              ;
 		   COL_OTHER=RED                                                 ;
-#           print "ici whyyy" ;
 	}
-	if (dbstatus != dbtarget) {
+	if (i_status != i_target) {
 		    COL_OPEN=WITH_BACK2                                          ;
 		COL_READONLY=WITH_BACK2                                          ;
 		    COL_SHUT=WITH_BACK2                                          ;
 		   COL_OTHER=WITH_BACK2                                          ;
 		STATUS_ISSUE=1                                                   ;
 	}
-#        print "========"COL_OPEN":"COL_SHUT ;
 }
 { # Fill 2 tables with the OH and the version from "crsctl stat res -p -w "TYPE = ora.database.type""
     if ($1 == "NAME") {
@@ -703,11 +703,9 @@ function set_color_status(i_db, i_node) {
 
     DB=$2                                                                                             ;
     split($2, temp, ".")                                                                              ;
-
     if (length(temp[1]) > COL_DB-1) {                                                                     # To adapt the 1st column size
         COL_DB = length(temp[1]) +1                                                                   ;
     }
-
     if (type == "TECH") {
         if ($2 ~ /\./) {
             sub(/\.[[:alnum:]]*$/, "", $2)                                                            ;
@@ -721,6 +719,7 @@ function set_color_status(i_db, i_node) {
             tab_tech[temp[1]] = temp[1]                                                               ;
         }
     }
+    delete temp                                                                                       ;
 
     getline; getline                                                                                  ;
     if ($1 == "ACL") {                        # crsctl stat res -p output
@@ -783,7 +782,6 @@ function set_color_status(i_db, i_node) {
                     split(DBPDB, temppdb, ".")                                                        ; # Here, DB = dbname.pdbname
                     pdb[temppdb[1]][temppdb[2]] = PDB                                                 ;
                     delete temppdb                                                                    ;
-                    print temppdb[1],temppdb[2], pdb[temppdb[1]][temppdb[2]]                          ;
                 }
                 if ($1 == "ENABLED") {                                                                      # Service is enabled (1) or disabled (0)
                     for (i=1; i<=n; i++) {                                                                  # n = number of nodes
@@ -903,11 +901,8 @@ function set_color_status(i_db, i_node) {
                 if (length(status[DB,SERVER]) > COL_NODE) { COL_NODE = length(status[DB,SERVER]) + COL_NODE_OFFSET;}
             }
             if ($1 == "TARGET")             {       target[DB,SERVER]=$2                    ;}
-            if ($1 == "LAST_RESTART")       {       #print "--------"DBPDB ;
-                                                    if (type == "PDB") {started[DBPDB,SERVER]=diff_hours($2" "$3)  ; #print "pdb" started[PDB,SERVER]"B" ;
-                                                    } else             {started[DB,SERVER]=diff_hours($2" "$3)   ; #print "db" started[DB,SERVER]"B" ;
-                                                    }
-                                                 #   print "aaaaaaaa"type":"$2" "$3 ;
+            if ($1 == "LAST_RESTART")       {       if (type == "PDB") { started[DBPDB,SERVER]=diff_hours($2" "$3);
+                                                    } else             { started[DB,SERVER]=diff_hours($2" "$3)   ;}
                                             }
             if ($1 == "STATE_DETAILS")      {       NB++                                    ;       # Number of instances we came through
                 if (DB ~ /acfs/)            {       sub ("mounted on ", "", $2)             ;      
@@ -938,7 +933,7 @@ function set_color_status(i_db, i_node) {
 END {       #
     # Tech stuff
     #
-    if (length(tab_tech) > 0) {                                                           # We print only if we have something to show
+    if ((length(tab_tech) > 0) && (SHOW_TECH == "YES")) {            # We print only if we have something to show
         # A header for the listeners
         printf("%s", center("Type" ,  COL_DB, WHITE, COL_SEP))                          ;
         printf("%s", center("Name"     , COL_VER+1, WHITE, COL_SEP))                    ;
@@ -971,28 +966,29 @@ END {       #
                 a = the_name"."the_type                                                 ;
             }
             for (j = 1; j <= n; j++) {                       # For each node
-                if (is_enabled[a, nodes[j]] == "") {
+                l_node = nodes[j]                            # Make it more clear later ;
+                if (is_enabled[a, l_node] == "") {
                     tech_enabled = 1                                                    ;
                 } else {
-                    tech_enabled = is_enabled[a, nodes[j]]                              ;
+                    tech_enabled = is_enabled[a, l_node]                                ;
                 }
-                tech_status = status[a, nodes[j]]                                       ;
-                tech_target = target[a, nodes[j]]                                       ;
+                tech_status = status[a, l_node]                                         ;
+                tech_target = target[a, l_node]                                         ;
                 if (tech_status == "") {
                     tech_status = status[a, ""]                                         ;
                 }
-                if ((started[a,nodes[j]] < DIFF_HOURS) && (started[a,nodes[j]])) {
-                    COL_ONLINE=WITH_BACK                                                ;
-                    COL_OTHER=WITH_BACK                                                 ;
+                if ((started[a,l_node] < DIFF_HOURS) && (started[a,l_node])) {
+                          COL_ONLINE=WITH_BACK                                          ;
+                           COL_OTHER=WITH_BACK                                          ;
                     RECENT_RESTARTED=1                                                  ;
                 } else {
-                    COL_ONLINE=GREEN                                                    ;
-                    COL_OTHER=RED                                                       ;
+                          COL_ONLINE=GREEN                                              ;
+                           COL_OTHER=RED                                                ;
                 }
                 if (tech_status != tech_target) {
-                    COL_ONLINE=WITH_BACK2                                               ;
-                    COL_OTHER=WITH_BACK2                                                ;
-                    STATUS_ISSUE=1                                                      ;
+                          COL_ONLINE=WITH_BACK2                                         ;
+                           COL_OTHER=WITH_BACK2                                         ;
+                        STATUS_ISSUE=1                                                  ;
                 }
                 if (tech_enabled == 1) {                                                  # Resource is enabled
                     if (tech_status == "") {
@@ -1058,13 +1054,13 @@ END {       #
     #
     # Listeners
     #
-    if (length(tab_lsnr) > 0) {                # We print only if we have something to show
+    if ((length(tab_lsnr) > 0) && (SHOW_LSNR == "YES")) {             # We print only if we have something to show
         # A header for the listeners
         printf("%s", center("Listener" ,  COL_DB, WHITE, COL_SEP))                      ;
         printf("%s", center("Port"     , COL_VER+1, WHITE, COL_SEP))                    ;
         n=asort(nodes)                                                                  ;       # sort array nodes
         for (i = 1; i <= n; i++) {
-        printf("%s", center(nodes[i], COL_NODE, WHITE, COL_SEP))                        ;
+            printf("%s", center(nodes[i], COL_NODE, WHITE, COL_SEP))                    ;
         }
         printf("%s", center("Type"    , COL_TYPE, WHITE, COL_SEP))                      ;
         printf("\n")                                                                    ;
@@ -1075,20 +1071,22 @@ END {       #
         # print the listeners
         x=asorti(tab_lsnr, lsnr_sorted)                                                 ;
         for (j = 1; j <= x; j++) {                                                        # For each listener
-            printf(COLOR_BEGIN WHITE " %-"COL_DB-1"s" COLOR_END"|", lsnr_sorted[j], WHITE);     # Listener name
+            l_lsnr = lsnr_sorted[j]                                                     ; 
+            printf(COLOR_BEGIN WHITE " %-"COL_DB-1"s" COLOR_END"|", l_lsnr, WHITE)      ; # Listener name
             # It may happen that listeners listen on many ports then it wont fit this column
             # We then print it outside of the table after the last column
-            if (length(port[lsnr_sorted[j]]) > COL_VER) {
+            if (length(port[l_lsnr]) > COL_VER) {
                 printf(COLOR_BEGIN WHITE " %-"COL_VER"s" COLOR_END"|", "See -->", WHITE);       # "See -->"
                 print_port_later = 1                                                    ;
             } else {
-                printf(COLOR_BEGIN WHITE " %-"COL_VER"s" COLOR_END"|", port[lsnr_sorted[j]], WHITE);      # Port
+                printf(COLOR_BEGIN WHITE " %-"COL_VER"s" COLOR_END"|", port[l_lsnr], WHITE);      # Port
             }
             for (i = 1; i <= n; i++) {                                                     # For each node
-                dbstatus =         status[lsnr_sorted[j],nodes[i]]                      ;
-                dbtarget =         target[lsnr_sorted[j],nodes[i]]                      ;
-                dbdetail = status_details[lsnr_sorted[j],nodes[i]]                      ;
-                if ((started[lsnr_sorted[j],nodes[i]] < DIFF_HOURS) && (started[lsnr_sorted[j],nodes[i]])) {
+                l_node   = nodes[i]                                                     ;
+                dbstatus =         status[l_lsnr,l_node]                                ;
+                dbtarget =         target[l_lsnr,l_node]                                ;
+                dbdetail = status_details[l_lsnr,l_node]                                ;
+                if ((started[l_lsnr,l_node] < DIFF_HOURS) && (started[l_lsnr,l_node])) {
                           COL_ONLINE=WITH_BACK                                          ;
                            COL_OTHER=WITH_BACK                                          ;
                     RECENT_RESTARTED=1                                                  ;
@@ -1101,7 +1099,7 @@ END {       #
                            COL_OTHER=WITH_BACK2                                         ;
                         STATUS_ISSUE=1                                                  ;
                 }
-                if (is_enabled[lsnr_sorted[j],nodes[i]] == 0) {                            # Listener disabled
+                if (is_enabled[l_lsnr,l_node] == 0) {                            # Listener disabled
                     LISTENER_DISABLED = 1                                               ;
                                 right = int((COL_NODE - length(dbstatus)) / 2)          ;
                                 left  = COL_NODE - length(dbstatus) - right             ;
@@ -1118,7 +1116,7 @@ END {       #
                 }
             }
             # Type column
-            if (toupper(lsnr_sorted[j]) ~ /SCAN/) {
+            if (toupper(l_lsnr) ~ /SCAN/) {
                 LSNR_TYPE = "SCAN"                                                      ;
             } else {
                 LSNR_TYPE = "Listener"                                                  ;
@@ -1126,7 +1124,7 @@ END {       #
             printf("%s", center(LSNR_TYPE, COL_TYPE, WHITE, COL_SEP))                   ;
             if (print_port_later) {
                 print_port_later = 0                                                    ;
-                printf(COLOR_BEGIN WHITE " %-"COL_VER-1"s" COLOR_END, port[lsnr_sorted[j]], WHITE);      # Port
+                printf(COLOR_BEGIN WHITE " %-"COL_VER-1"s" COLOR_END, port[l_lsnr], WHITE);      # Port
             }
             printf("\n")                                                                ;
         }
@@ -1142,7 +1140,7 @@ END {       #
     #
     # Services
     #
-    if (length(tab_svc) > 0) {                # We print only if we have something to show
+    if ((length(tab_svc) > 0) && (SHOW_SVC == "YES")) {               # We print only if we have something to show
         # A header for the services
         printf("%s", center("DB"      ,  COL_DB   , WHITE, COL_SEP))                    ;
         printf("%s", center("Service" ,  COL_VER+1, WHITE, COL_SEP))                    ;
@@ -1234,7 +1232,7 @@ END {       #
     #
     # Databases
     #
-    if (length(version) > 0) {   # We print only if we have something to show
+    if ((length(version) > 0) && (SHOW_DB == "YES")) {   # We print only if we have something to show
         # sort the OH array by OH names
         k=asorti(oh_list, oh_list_sorted)
         for (j=1; j<=k; j++){
@@ -1247,7 +1245,7 @@ END {       #
         for (i = 1; i <= n; i++) {
             printf("%s", center(nodes[i], COL_NODE, WHITE, COL_SEP))                     ;
         }
-        printf("%s", center("DB Type"    , COL_TYPE, WHITE, COL_SEP))                    ;
+        printf("%s", center("DB Type"   , COL_TYPE, WHITE, COL_SEP))                     ;
         printf("\n")                                                                     ;
 
         # a "---" line under the header
@@ -1267,29 +1265,7 @@ END {       #
                 dbstatus =           status[l_db,l_node]                                 ;
                 dbtarget =           target[l_db,l_node]                                 ;
                 dbdetail =   status_details[l_db,l_node]                                 ;
-                #
-                # Print the status here, all that are not listed in that if ladder will appear in RED
-                #
-                set_color_status(l_db, l_node)                                           ;
-#                if ((started[l_db,l_node] < DIFF_HOURS) && (started[l_db,l_node])) {
-#                            COL_OPEN=WITH_BACK                                           ;
-#                        COL_READONLY=WITH_BACK                                           ;
-#                            COL_SHUT=WITH_BACK                                           ;
-#                           COL_OTHER=WITH_BACK                                           ;
-#                    RECENT_RESTARTED=1                                                   ;
-#                } else  {
-#                            COL_OPEN=GREEN                                               ;
-#                        COL_READONLY=WHITE                                               ;
-#                            COL_SHUT=YELLOW                                              ;
-#                           COL_OTHER=RED                                                 ;
-#                }
-#                if (dbstatus != dbtarget) {
-#                            COL_OPEN=WITH_BACK2                                          ;
-#                        COL_READONLY=WITH_BACK2                                          ;
-#                            COL_SHUT=WITH_BACK2                                          ;
-#                           COL_OTHER=WITH_BACK2                                          ;
-#                        STATUS_ISSUE=1                                                   ;
-#                }
+                set_color_status(l_db, l_node, dbstatus, dbtarget)                       ;
                 if ((is_enabled[l_db,l_node] == 0) && (is_enabled[l_db,l_node] != "")) { # Instance disabled
                     INSTANCE_DISABLED = 1                                                ;
                     right = int((COL_NODE - length(dbdetail)) / 2)                       ;
@@ -1331,12 +1307,10 @@ END {       #
             #
             # PDBs
             #
-            if (length(pdb[l_db]) > 0) {              # Only if there are PDBs
-                #print "==>"l_db ;
+            if (length(pdb[l_db]) > 0 && SHOW_PDB == "YES") {              # Only if there are PDBs
                 for (x in pdb[l_db]) {tempopdb[x]=x;} ;
                 z=asort(tempopdb,pdb_sorted) ;
                 for (p=1; p<=z; p++) {     # For each PDB
-#                    print "------"pdb_sorted[p]
                     l_pdb = pdb_sorted[p] ;
                     l_dbpdb = l_db"."l_pdb ;
                     printf(COLOR_BEGIN COLOR_DB "  %-"COL_DB-2"s" COLOR_END"|", l_pdb )      ;   # PDB
@@ -1346,11 +1320,7 @@ END {       #
                         pdbstatus =           status[l_dbpdb,l_node]                         ;
                         pdbtarget =           target[l_dbpdb,l_node]                         ;
 #                        pdbdetail =   status_details[l_dbdbp,l_node]                         ;
-                        set_color_status(l_dbpdb, l_node)                                    ;
-# ici
-                        COLOR_PDB=COL_OTHER ;
-                        if (tolower(pdbstatus) == "online"){ COLOR_PDB=COL_ONLINE }
-
+                        set_color_status(l_dbpdb, l_node, pdbstatus, pdbtarget)              ;
                         if ((is_enabled[l_dbpdb,l_node] == 0) && (is_enabled[l_dbpdb,l_node] != "")) { # Instance disabled
                             INSTANCE_DISABLED = 1                                             ;
                             right = int((COL_NODE - length(pdbstatus)) / 2)                   ;
@@ -1358,11 +1328,14 @@ END {       #
                             if (length(pdbstatus) < COL_DB+4) {
                                 left--                                                        ;
                             }
-                            printf("%"left"s%s %s%"right"s", "", in_color(nice_case(pdbstatus), COLOR_PDB), in_color(DISABLED, RED), COL_SEP);
+                            if (tolower(pdbstatus) == "online"){
+                                printf("%"left"s%s %s%"right"s", "", in_color(nice_case(pdbstatus), COL_OPEN), in_color(DISABLED, RED), COL_SEP); } else {
+                                printf("%"left"s%s %s%"right"s", "", in_color(nice_case(pdbstatus), COL_OTHER), in_color(DISABLED, RED), COL_SEP); }
                         } else {
-                            printf("%s", center(nice_case(pdbstatus), COL_NODE, COLOR_PDB, COL_SEP)) ;
+                            if (tolower(pdbstatus) == "online"){
+                                printf("%s", center(nice_case(pdbstatus), COL_NODE, COL_OPEN, COL_SEP)) ; } else {
+                                printf("%s", center(nice_case(pdbstatus), COL_NODE, COL_OTHER, COL_SEP)) ; }
                         }
-                       #  print "==>"l_dbpdb":"pdbstatus":"is_enabled[l_dbpdb,l_node]
                     }
                     printf("%s", center("PDB", COL_TYPE, ROLE_COLOR, COL_SEP)) ;
                     printf("\n")                                                             ;
