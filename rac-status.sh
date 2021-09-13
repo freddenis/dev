@@ -15,6 +15,7 @@
 # 20210912 - Fred Denis - Implement new GI 21c PDB status; also -p to show/hide PDBs, default is we show the PDBs
 #                         STATE_DETAILS does not seem to be implemented (yet ?) for PDBs so the only info we have
 #                         is Online/Offline, we do not know if PDBs are READ WRITE or READ ONLY -- SEED not here either
+#                         Now relies on LAST_STATE_CHANGE and no more LAST_RESTART for color if something has changed recently
 # 20210908 - Fred Denis - Fixed a bad character next to cluster status with -u (no color) option
 # 20210825 - Fred Denis - Cluster upgrade status was causing an issue for HAS -- now fixed
 #                         There was some leftover color codes with -u option -- now fixed
@@ -206,6 +207,7 @@ END
                 - The services
         With no option, `basename $0` will show what is defined by the variables :
                 - SHOW_DB       # To show the databases instances
+                - SHOW_PDB      # To show the PDBs (only if your GI is >= 21c)
                 - SHOW_LSNR     # To show the listeners
                 - SHOW_SVC      # To show the services
                 - SHOW_TECH     # To show the tech stuff (DGs, ONS, etc ...)
@@ -572,26 +574,26 @@ function in_color(str, color) {
 #
 function diff_hours(a_date) {
     if ((a_date == "NEVER ") || (a_date == " ")) {
-        return 999999999999                                                                          ;
+        return 999999999999                                                                         ; 
     } else {
-        split(a_date, temp, /[\/ :]/)                                                                ;
+        split(a_date, temp, /[\/ :]/)                                                               ;
         return sprintf("%d", (systime()-mktime(temp[3]" "temp[1]" "temp[2]" "temp[4]" "temp[5]" "temp[6]))/(60*60)) ;
-        delete temp                                                                                  ;
+        delete temp                                                                                 ;
     }
 }
 #
 # Get a string and return it with a nice case: first character in upper case ad the others in lower case (ABCD => Abcd)
 #
 function nice_case(str) {
-    return sprintf("%s", toupper(substr(str,1,1)) tolower(substr(str,2,length(str))))                ;
+    return sprintf("%s", toupper(substr(str,1,1)) tolower(substr(str,2,length(str))))               ;
 }
 #
 # Print a legend for the recent restarted instances, listeners and services
 #
 function print_legend_recent_restarted() {
     if (RECENT_RESTARTED == 1) {
-        printf("%s", " ")                                                                             ;
-        printf(COLOR_BEGIN WITH_BACK "%-3s" COLOR_END, " ")                                           ;
+        printf("%s", " ")                                                                           ;
+        printf(COLOR_BEGIN WITH_BACK "%-3s" COLOR_END, " ")                                         ;
         if (DIFF_HOURS_UNIT == "h")     { UNIT="hour"           }
         if (DIFF_HOURS_UNIT == "d")     { UNIT="day"            }
         if (DIFF_HOURS_UNIT == "w")     { UNIT="week"           }
@@ -606,8 +608,8 @@ function print_legend_recent_restarted() {
 #
 function print_legend_status_issue() {
     if (STATUS_ISSUE == 1) {
-        printf(COLOR_BEGIN WITH_BACK2 "%-3s" COLOR_END, " ")                                          ;
-        printf(COLOR_BEGIN WHITE " %-s\n " COLOR_END, ": STATUS and TARGET are different")            ;
+        printf(COLOR_BEGIN WITH_BACK2 "%-3s" COLOR_END, " ")                                        ;
+        printf(COLOR_BEGIN WHITE " %-s\n " COLOR_END, ": STATUS and TARGET are different")          ;
     }
 }
 #
@@ -615,9 +617,9 @@ function print_legend_status_issue() {
 #
 function print_legend_disabled(a_variable, a_text) {
     if (a_variable == 1) {
-        printf("%s", " ")                                                                             ;
-        printf("%s", center(DISABLED, 3, RED))                                                        ;
-        printf("%-s\n", in_color(" : "a_text" is disabled", WHITE))                                   ;
+        printf("%s", " ")                                                                           ;
+        printf("%s", center(DISABLED, 3, RED))                                                      ;
+        printf("%-s\n", in_color(" : "a_text" is disabled", WHITE))                                 ;
     }
 }
 #
@@ -625,188 +627,188 @@ function print_legend_disabled(a_variable, a_text) {
 #
 function print_a_line(size) {
     if ( ! size) {
-        size = COL_DB+COL_VER+(COL_NODE*n)+COL_TYPE+n+3                                               ;
+        size = COL_DB+COL_VER+(COL_NODE*n)+COL_TYPE+n+3                                             ;
     }
-    printf("%s", COLOR_BEGIN WHITE)                                                                   ;
-    for (k=1; k<=size; k++) {printf("%s", "-");}                                                      ;       # n = number of nodes
-    printf("%s", COLOR_END"\n")                                                                       ;
+    printf("%s", COLOR_BEGIN WHITE)                                                                 ;
+    for (k=1; k<=size; k++) {printf("%s", "-");}                                                    ; # n = number of nodes
+    printf("%s", COLOR_END"\n")                                                                     ;
 }
 #
 # Set colors depending on the recently restarted date and dbstatus and dbtarget
 #
 function set_color_status(i_db, i_node, i_status, i_target) {
-	if ((started[i_db,i_node] < DIFF_HOURS) && (started[i_db,i_node])) {
-		    COL_OPEN=WITH_BACK                                           ;
-		COL_READONLY=WITH_BACK                                           ;
-		    COL_SHUT=WITH_BACK                                           ;
-		   COL_OTHER=WITH_BACK                                           ;
-	    RECENT_RESTARTED=1                                                   ;
+	if ((started[i_db,i_node]+0 < DIFF_HOURS+0) && (started[i_db,i_node])) {
+		    COL_OPEN=WITH_BACK                                                              ;
+		COL_READONLY=WITH_BACK                                                              ;
+		    COL_SHUT=WITH_BACK                                                              ;
+		   COL_OTHER=WITH_BACK                                                              ;
+	    RECENT_RESTARTED=1                                                                      ;
 	} else  {
-		    COL_OPEN=GREEN                                               ;
-		COL_READONLY=WHITE                                               ;
-		    COL_SHUT=YELLOW                                              ;
-		   COL_OTHER=RED                                                 ;
+		    COL_OPEN=GREEN                                                                  ;
+		COL_READONLY=WHITE                                                                  ;
+		    COL_SHUT=YELLOW                                                                 ;
+		   COL_OTHER=RED                                                                    ;
 	}
 	if (i_status != i_target) {
-		    COL_OPEN=WITH_BACK2                                          ;
-		COL_READONLY=WITH_BACK2                                          ;
-		    COL_SHUT=WITH_BACK2                                          ;
-		   COL_OTHER=WITH_BACK2                                          ;
-		STATUS_ISSUE=1                                                   ;
+		    COL_OPEN=WITH_BACK2                                                             ;
+		COL_READONLY=WITH_BACK2                                                             ;
+		    COL_SHUT=WITH_BACK2                                                             ;
+		   COL_OTHER=WITH_BACK2                                                             ;
+		STATUS_ISSUE=1                                                                      ;
 	}
 }
 { # Fill 2 tables with the OH and the version from "crsctl stat res -p -w "TYPE = ora.database.type""
     if ($1 == "NAME") {
-        sub("^ora.", "", $2)                                                                          ;
-        sub(/\(.*$/, "", $2)                                                                          ; # Remove the consumer group
-        type = "TECH"                                                                                 ;
-    if ($2 ~ /\.db$/) {                                                                                 # Databases
-        type            = "DB"                                                                        ;
-        sub(".db$",  "", $2)                                                                          ;
+        sub("^ora.", "", $2)                                                                        ;
+        sub(/\(.*$/, "", $2)                                                                        ; # Remove the consumer group
+        type            = "TECH"                                                                    ;
+    if ($2 ~ /\.db$/) {                                                                               # Databases
+        type            = "DB"                                                                      ;
+        sub(".db$",  "", $2)                                                                        ;
     }
-    if ($2 ~ /\.pdb$/) {                                                                                 # PDBs
-        type            = "PDB"                                                                       ;
-        sub(".pdb$",  "", $2)                                                                         ;
-        DBPDB           = $2                                                                          ;
+    if ($2 ~ /\.pdb$/) {                                                                              # PDBs
+        type            = "PDB"                                                                     ;
+        sub(".pdb$",  "", $2)                                                                       ;
+        DBPDB           = $2                                                                        ;
     }
-    if ($2 ~ /\.lsnr/) {                                                                                 # Listeners
-        sub(".lsnr$", "", $2)                                                                         ;
-        tab_lsnr[$2]    = $2                                                                          ;
-        type            =       "LISTENER"                                                            ;
+    if ($2 ~ /\.lsnr/) {                                                                              # Listeners
+        sub(".lsnr$", "", $2)                                                                       ;
+        tab_lsnr[$2]    = $2                                                                        ;
+        type            = "LISTENER"                                                                ;
     }
 
-    if ($2 ~ /\.svc/) {                                                                                 # Services
-        sub(".svc$", "", $2)                                                                          ;
+    if ($2 ~ /\.svc/) {                                                                               # Services
+        sub(".svc$", "", $2)                                                                        ;
        dbandservice=$2
-            service=$2                                                                                ;
+            service=$2                                                                              ;
              svc_db=$2
 
-        sub(/^[^.]*\./, "", service)                                                                  ; # Remove the DB name
-        sub(/\..*$/, "", svc_db)                                                                      ; # DB name only
+        sub(/^[^.]*\./, "", service)                                                                ; # Remove the DB name
+        sub(/\..*$/, "", svc_db)                                                                    ; # DB name only
 
         if (oh[svc_db]){                   # We ignore the services not related to an already found DB (see -D option)
             if (nbsvcshow > 0){
                 if (service in svcshow){   # If we want specific services (see -S option)
-                    tab_svc[dbandservice]=dbandservice                                                ;
+                    tab_svc[dbandservice]=dbandservice                                              ;
                 } 
             } else {
-                tab_svc[dbandservice]=dbandservice                                                    ;
+                tab_svc[dbandservice]=dbandservice                                                  ;
             }
-            if (length(service) > COL_VER-1) {                                                          # To adapt the column size
-                COL_VER = length(service) +1                                                          ;
+            if (length(service) > COL_VER-1) {                                                        # To adapt the column size
+                COL_VER = length(service) +1                                                        ;
             }
         } else {
-            next                                                                                      ;
+            next                                                                                    ;
         }
-        type             =       "SERVICE"                                                            ;
+        type            = "SERVICE"                                                                 ;
     }
 
-    DB=$2                                                                                             ;
-    split($2, temp, ".")                                                                              ;
-    if (length(temp[1]) > COL_DB-1) {                                                                     # To adapt the 1st column size
-        COL_DB = length(temp[1]) +1                                                                   ;
+    DB=$2                                                                                           ;
+    split($2, temp, ".")                                                                            ;
+    if (length(temp[1]) > COL_DB-1) {                                                                 # To adapt the 1st column size
+        COL_DB = length(temp[1]) +1                                                                 ;
     }
     if (type == "TECH") {
         if ($2 ~ /\./) {
-            sub(/\.[[:alnum:]]*$/, "", $2)                                                            ;
+            sub(/\.[[:alnum:]]*$/, "", $2)                                                          ;
             # We put the type before the name to sort it by type easily later
-               type_name = temp[length(temp)]"."$2                                                    ;
-            tab_tech[$2] = type_name                                                                  ;
+               type_name = temp[length(temp)]"."$2                                                  ;
+            tab_tech[$2] = type_name                                                                ;
             if (length($2) > COL_VER-1) {
-                 COL_VER = length($2) + 1                                                             ;
+                 COL_VER = length($2) + 1                                                           ;
             }
         } else {
-            tab_tech[temp[1]] = temp[1]                                                               ;
+            tab_tech[temp[1]] = temp[1]                                                             ;
         }
     }
-    delete temp                                                                                       ;
+    delete temp                                                                                     ;
 
-    getline; getline                                                                                  ;
+    getline; getline                                                                                ;
     if ($1 == "ACL") {                        # crsctl stat res -p output
         if (type == "DB") {
             # Get the owner and the group
-            match($2, /owner:([[:alnum:]]*):.*/, OWNER)                                              ;
-            match($2, /^.*pgrp:([[:alnum:]]*):.*/, GROUP)                                            ;
+            match($2, /owner:([[:alnum:]]*):.*/, OWNER)                                             ;
+            match($2, /^.*pgrp:([[:alnum:]]*):.*/, GROUP)                                           ;
             while (getline)
             {
                 if ($1 == "ORACLE_HOME") {
-                    OH = $2                                                                          ;
-                    match($2, /[1-2][0-9]\.[0-9]\.?[0-9]?\.?[0-9]?/)                                 ;       # Grab the version from the OH path
-                    VERSION = substr($2,RSTART,RLENGTH)                                              ;
+                    OH = $2                                                                         ;
+                    match($2, /[1-9][0-9]\.[0-9]\.?[0-9]?\.?[0-9]?/)                                ; # Grab the version from the OH path
+                    VERSION = substr($2,RSTART,RLENGTH)                                             ;
                 }
-                if ($1 == "DATABASE_TYPE") {                                                                 # RAC / RACOneNode / Single Instance are expected here
-                    dbtype[DB] = $2                                                                  ;
+                if ($1 == "DATABASE_TYPE") {                                                          # RAC / RACOneNode / Single Instance are expected here
+                    dbtype[DB] = $2                                                                 ;
                 }
-                if ($1 == "ROLE") {                                                                          # Primary / Standby expected here
-                    role[DB] = $2                                                                    ;
+                if ($1 == "ROLE") {                                                                   # Primary / Standby expected here
+                    role[DB] = $2                                                                   ;
                 }
-                if ($1 == "ENABLED") {                                                                       # Instance is enabled (1) or disabled (0)
-                    enabled = $2                                                                     ;       # Save it for later
+                if ($1 == "ENABLED") {                                                                # Instance is enabled (1) or disabled (0)
+                    enabled = $2                                                                    ; # Save it for later
                 }
                 if ($1 == "GEN_USR_ORA_INST_NAME") {
-                    instance = $2                                                                    ;
+                    instance = $2                                                                   ;
                     while (getline) {
                         if (($1 ~ /^GEN_USR_ORA_INST_NAME@SERVERNAME/) && ($2 == instance)) {
-                            sub("GEN_USR_ORA_INST_NAME@SERVERNAME[(]", "", $1)                       ;
-                            sub(")", "", $1)                                                         ;
-                            is_enabled[DB,$1] = enabled                                              ;
-                            break                                                                    ;
+                            sub("GEN_USR_ORA_INST_NAME@SERVERNAME[(]", "", $1)                      ;
+                            sub(")", "", $1)                                                        ;
+                            is_enabled[DB,$1] = enabled                                             ;
+                            break                                                                   ;
                         }
                         if ($0 ~ /^$/) {
-                            break                                                                    ;
+                            break                                                                   ;
                         }
 
                     }
                 }
                 if ($0 ~ /^$/) {
-                    version[DB] = VERSION                                                            ;
-                         oh[DB] = OH                                                                 ;
+                    version[DB] = VERSION                                                           ;
+                         oh[DB] = OH                                                                ;
 
                     if (!(OH in oh_list)) {
-                        oh_ref++                                                                     ;
-                        oh_list[OH] = oh_ref                                                         ;
-                        o_list[OH] = OWNER[1]                                                        ;
-                        g_list[OH] = GROUP[1]                                                        ;
-                        if (length(OH)       > COL_OH)    {        COL_OH = length(OH)               ; }
-                        if (length(OWNER[1]) > COL_OWNER) {     COL_OWNER = length(OWNER[1])         ; }
-                        if (length(GROUP[1]) > COL_GROUP) {     COL_GROUP = length(GROUP[1])         ; }
+                        oh_ref++                                                                    ;
+                        oh_list[OH] = oh_ref                                                        ;
+                        o_list[OH] = OWNER[1]                                                       ;
+                        g_list[OH] = GROUP[1]                                                       ;
+                        if (length(OH)       > COL_OH)    {        COL_OH = length(OH)              ; }
+                        if (length(OWNER[1]) > COL_OWNER) {     COL_OWNER = length(OWNER[1])        ; }
+                        if (length(GROUP[1]) > COL_GROUP) {     COL_GROUP = length(GROUP[1])        ; }
                     }
-                    break                                                                            ;
+                    break                                                                           ;
                 }
             }
         }       # End if (type == "DB")
         if (type == "PDB") {
             while(getline) {
                 if ($1 == "PDB_NAME") {
-                    PDB = $2                                                                          ;
-                    split(DBPDB, temppdb, ".")                                                        ; # Here, DB = dbname.pdbname
-                    pdb[temppdb[1]][temppdb[2]] = PDB                                                 ;
-                    delete temppdb                                                                    ;
+                    PDB = $2                                                                        ;
+                    split(DBPDB, temppdb, ".")                                                      ; # Here, DB = dbname.pdbname
+                    pdb[temppdb[1]][temppdb[2]] = PDB                                               ;
+                    delete temppdb                                                                  ;
                 }
-                if ($1 == "ENABLED") {                                                                      # Service is enabled (1) or disabled (0)
-                    for (i=1; i<=n; i++) {                                                                  # n = number of nodes
-                        is_enabled[DB,nodes[i]]= $2                                                   ;
+                if ($1 == "ENABLED") {                                                                # Service is enabled (1) or disabled (0)
+                    for (i=1; i<=n; i++) {                                                            # n = number of nodes
+                        is_enabled[DB,nodes[i]]= $2                                                 ;
                     }
                     while(getline) {
                         if ($1 ~ /ENABLED@SERVERNAME/ ) {
-                            sub("ENABLED@SERVERNAME[(]", "", $1)                                      ;
-                            sub(")", "", $1)                                                          ;
-                            is_enabled[DB,$1] = $2                                                    ;
+                            sub("ENABLED@SERVERNAME[(]", "", $1)                                    ;
+                            sub(")", "", $1)                                                        ;
+                            is_enabled[DB,$1] = $2                                                  ;
                         } else  {
-                            break                                                                     ;
+                            break                                                                   ;
                         }
                     }
                 }
                 if ($0 ~ /^$/) {
-                    break                                                                             ;
+                    break                                                                           ;
                 }
             }
         }       # End if (type == "PDB")
 
         if (type == "SERVICE") {
             while(getline) {
-                if ($1 == "ENABLED") {                                                                      # Service is enabled (1) or disabled (0)
-                    for (i=1; i<=n; i++) {                                                                  # n = number of nodes
+                if ($1 == "ENABLED") {                                                                 # Service is enabled (1) or disabled (0)
+                    for (i=1; i<=n; i++) {                                                             # n = number of nodes
                         is_enabled[DB,nodes[i]]= $2                                                  ;
                     }
                     while(getline) {
@@ -819,7 +821,7 @@ function set_color_status(i_db, i_node, i_status, i_target) {
                         }
                     }
                 }
-                if ($1 == "ROLE") {                                                                         # Service type (primary / standby)
+                if ($1 == "ROLE") {                                                                    # Service type (primary / standby)
                     tab_svc_type[service]=$2                                                         ;
                 }
                 if ($1 == "PLUGGABLE_DATABASE") {
@@ -835,8 +837,8 @@ function set_color_status(i_db, i_node, i_status, i_target) {
 
         if (type == "LISTENER") {
             while(getline) {
-                if ($1 == "ENABLED") {                                                                     # Listener is enabled (1) or disabled (0)
-                    for (i=1; i<=n; i++) {                                                                 # n = number of nodes
+                if ($1 == "ENABLED") {                                                                 # Listener is enabled (1) or disabled (0)
+                    for (i=1; i<=n; i++) {                                                             # n = number of nodes
                         is_enabled[DB,nodes[i]]= $2                                                  ;
                     }
                     while(getline) {
@@ -859,7 +861,7 @@ function set_color_status(i_db, i_node, i_status, i_target) {
         if (type == "TECH") {
             while (getline) {
                  if ($1 == "ENABLED") {
-                     for (i=1; i<=n; i++) {                                                                # n = number of nodes
+                     for (i=1; i<=n; i++) {                                                            # n = number of nodes
                          is_enabled[DB,nodes[i]]= $2                                                 ;
                      }
                      while(getline) {
@@ -892,19 +894,19 @@ function set_color_status(i_db, i_node, i_status, i_target) {
         NB = 0      ;       # Number of instances we went through
         SERVER = $2     ;
         if (length(SERVER) > COL_NODE) {
-            COL_NODE = length(SERVER) + COL_NODE_OFFSET                             ;
+            COL_NODE = length(SERVER) + COL_NODE_OFFSET                                              ;
         }
         while (getline) {
-            if ($1 == "LAST_SERVER")        {       SERVER = $2                             ; }
+            if ($1 == "LAST_SERVER")        {       SERVER = $2                             ;}
             if ($1 == "STATE")              {       gsub(" on .*$", "", $2)                 ;
                 status[DB,SERVER] = $2                  ;
                 if (length(status[DB,SERVER]) > COL_NODE) { COL_NODE = length(status[DB,SERVER]) + COL_NODE_OFFSET;}
             }
             if ($1 == "TARGET")             {       target[DB,SERVER]=$2                    ;}
-            if ($1 == "LAST_RESTART")       {       if (type == "PDB") { started[DBPDB,SERVER]=diff_hours($2" "$3);
+            if ($1 == "LAST_STATE_CHANGE")  {       if (type == "PDB") { started[DBPDB,SERVER]=diff_hours($2" "$3);
                                                     } else             { started[DB,SERVER]=diff_hours($2" "$3)   ;}
                                             }
-            if ($1 == "STATE_DETAILS")      {       NB++                                    ;       # Number of instances we came through
+            if ($1 == "STATE_DETAILS")      {       NB++                                    ;  # Number of instances we came through
                 if (DB ~ /acfs/)            {       sub ("mounted on ", "", $2)             ;      
                                                     tempdb=tolower(DB)                      ;
                                                     sub(/^[[:alnum:]_]*\./, "", tempdb)     ;
@@ -945,7 +947,6 @@ END {       #
 
         # a "---" line under the header
         print_a_line(COL_DB+COL_NODE*n+COL_VER+n+2)                                     ;
-
         # Print the tech stuff
         # Sort by type
         y = asort(tab_tech, tech_sorted)                                                ;
@@ -958,7 +959,7 @@ END {       #
             if (the_type == "advm") {  # advm more readable in lowercase
                 printf(COLOR_BEGIN WHITE " %-"COL_VER"s" COLOR_END"|", tolower(the_name), WHITE)     ;
             } else {
-                printf(COLOR_BEGIN WHITE " %-"COL_VER"s" COLOR_END"|", the_name, WHITE)     ;
+                printf(COLOR_BEGIN WHITE " %-"COL_VER"s" COLOR_END"|", the_name, WHITE) ;
             }
             if (the_name == the_type) {
                 a = the_type                                                            ;
@@ -977,29 +978,16 @@ END {       #
                 if (tech_status == "") {
                     tech_status = status[a, ""]                                         ;
                 }
-                if ((started[a,l_node] < DIFF_HOURS) && (started[a,l_node])) {
-                          COL_ONLINE=WITH_BACK                                          ;
-                           COL_OTHER=WITH_BACK                                          ;
-                    RECENT_RESTARTED=1                                                  ;
-                } else {
-                          COL_ONLINE=GREEN                                              ;
-                           COL_OTHER=RED                                                ;
-                }
-                if (tech_status != tech_target) {
-                          COL_ONLINE=WITH_BACK2                                         ;
-                           COL_OTHER=WITH_BACK2                                         ;
-                        STATUS_ISSUE=1                                                  ;
-                }
+                set_color_status(a, l_node, tech_status, tech_target)                   ;
                 if (tech_enabled == 1) {                                                  # Resource is enabled
                     if (tech_status == "") {
                         printf("%s", center(UNKNOWN, COL_NODE, COL_DEFAULT, COL_SEP ))  ;
                     } else {
                         if (toupper(tech_status) == "ONLINE") {
-                            THE_COLOR=GREEN                                             ;
+                            printf("%s", center(nice_case(tech_status), COL_NODE, COL_OPEN, COL_SEP))  ;
                         } else {
-                            THE_COLOR=RED                                               ;
+                            printf("%s", center(nice_case(tech_status), COL_NODE, COL_OTHER, COL_SEP)) ;
                         }
-                        printf("%s", center(nice_case(tech_status), COL_NODE, THE_COLOR, COL_SEP))      ;
                    }
                 } else {                                                                  # Resource is disabled
                     TECH_DISABLED = 1                                                   ;
@@ -1012,7 +1000,7 @@ END {       #
                         printf("%s", center(DISABLED, COL_NODE, RED, COL_SEP ))         ;
                     } else {
                         if (toupper(tech_status) == "ONLINE") {
-                            printf("%"left"s%s %s%"right"s", "", in_color(nice_case(tech_status), COL_ONLINE), in_color(DISABLED, RED),COL_SEP);
+                            printf("%"left"s%s %s%"right"s", "", in_color(nice_case(tech_status), COL_OPEN), in_color(DISABLED, RED),COL_SEP);
                         } else {
                             printf("%"left"s%s %s%"right"s", "", in_color(nice_case(tech_status), COL_OTHER ), in_color(DISABLED, RED),COL_SEP);
                         }
@@ -1058,7 +1046,7 @@ END {       #
         # A header for the listeners
         printf("%s", center("Listener" ,  COL_DB, WHITE, COL_SEP))                      ;
         printf("%s", center("Port"     , COL_VER+1, WHITE, COL_SEP))                    ;
-        n=asort(nodes)                                                                  ;       # sort array nodes
+        n=asort(nodes)                                                                  ; # sort array nodes
         for (i = 1; i <= n; i++) {
             printf("%s", center(nodes[i], COL_NODE, WHITE, COL_SEP))                    ;
         }
@@ -1076,7 +1064,7 @@ END {       #
             # It may happen that listeners listen on many ports then it wont fit this column
             # We then print it outside of the table after the last column
             if (length(port[l_lsnr]) > COL_VER) {
-                printf(COLOR_BEGIN WHITE " %-"COL_VER"s" COLOR_END"|", "See -->", WHITE);       # "See -->"
+                printf(COLOR_BEGIN WHITE " %-"COL_VER"s" COLOR_END"|", "See -->", WHITE); # "See -->"
                 print_port_later = 1                                                    ;
             } else {
                 printf(COLOR_BEGIN WHITE " %-"COL_VER"s" COLOR_END"|", port[l_lsnr], WHITE);      # Port
@@ -1086,19 +1074,20 @@ END {       #
                 dbstatus =         status[l_lsnr,l_node]                                ;
                 dbtarget =         target[l_lsnr,l_node]                                ;
                 dbdetail = status_details[l_lsnr,l_node]                                ;
-                if ((started[l_lsnr,l_node] < DIFF_HOURS) && (started[l_lsnr,l_node])) {
-                          COL_ONLINE=WITH_BACK                                          ;
-                           COL_OTHER=WITH_BACK                                          ;
-                    RECENT_RESTARTED=1                                                  ;
-                } else {
-                          COL_ONLINE=GREEN                                              ;
-                           COL_OTHER=RED                                                ;
-                }
-                if (dbstatus != dbtarget) {
-                          COL_ONLINE=WITH_BACK2                                         ;
-                           COL_OTHER=WITH_BACK2                                         ;
-                        STATUS_ISSUE=1                                                  ;
-                }
+                set_color_status(l_lsnr, l_node, dbstatus, dbtarget)
+#                if ((started[l_lsnr,l_node] < DIFF_HOURS) && (started[l_lsnr,l_node])) {
+#                          COL_ONLINE=WITH_BACK                                         ;
+#                           COL_OTHER=WITH_BACK                                         ;
+#                    RECENT_RESTARTED=1                                                 ;
+#                } else {
+#                          COL_ONLINE=GREEN                                             ;
+#                           COL_OTHER=RED                                               ;
+#                }
+#                if (dbstatus != dbtarget) {
+#                          COL_ONLINE=WITH_BACK2                                        ;
+#                           COL_OTHER=WITH_BACK2                                        ;
+#                        STATUS_ISSUE=1                                                 ;
+#                }
                 if (is_enabled[l_lsnr,l_node] == 0) {                            # Listener disabled
                     LISTENER_DISABLED = 1                                               ;
                                 right = int((COL_NODE - length(dbstatus)) / 2)          ;
@@ -1107,12 +1096,12 @@ END {       #
                         left--                                                          ;
                     }
                     if (dbstatus == "")             {printf("%s", center(DISABLED,           COL_NODE, RED, COL_SEP ))      ;}    else
-                    if (dbstatus == "ONLINE")       {printf("%"left"s%s %s%"right"s", "", in_color(nice_case(dbstatus), COL_ONLINE), in_color(DISABLED, RED), COL_SEP);}
+                    if (dbstatus == "ONLINE")       {printf("%"left"s%s %s%"right"s", "", in_color(nice_case(dbstatus), COL_OPEN)  , in_color(DISABLED, RED), COL_SEP);}
                     else                            {printf("%"left"s%s %s%"right"s", "", in_color(nice_case(dbstatus), COL_OTHER ), in_color(DISABLED, RED), COL_SEP);}
                 } else {
-                    if (dbstatus == "")             {printf("%s", center(UNKNOWN,             COL_NODE, COL_DEFAULT, COL_SEP    ))      ;}      else
-                    if (dbstatus == "ONLINE")       {printf("%s", center(nice_case(dbstatus), COL_NODE, COL_ONLINE,  COL_SEP    ))      ;}
-                    else                            {printf("%s", center(nice_case(dbstatus), COL_NODE, COL_OTHER,   COL_SEP    ))      ;}
+                    if (dbstatus == "")             {printf("%s", center(UNKNOWN,             COL_NODE, COL_DEFAULT, COL_SEP   ))      ;}      else
+                    if (dbstatus == "ONLINE")       {printf("%s", center(nice_case(dbstatus), COL_NODE, COL_OPEN   , COL_SEP   ))      ;}
+                    else                            {printf("%s", center(nice_case(dbstatus), COL_NODE, COL_OTHER  ,  COL_SEP  ))      ;}
                 }
             }
             # Type column
@@ -1124,7 +1113,7 @@ END {       #
             printf("%s", center(LSNR_TYPE, COL_TYPE, WHITE, COL_SEP))                   ;
             if (print_port_later) {
                 print_port_later = 0                                                    ;
-                printf(COLOR_BEGIN WHITE " %-"COL_VER-1"s" COLOR_END, port[l_lsnr], WHITE);      # Port
+                printf(COLOR_BEGIN WHITE " %-"COL_VER-1"s" COLOR_END, port[l_lsnr], WHITE); # Port
             }
             printf("\n")                                                                ;
         }
@@ -1144,7 +1133,7 @@ END {       #
         # A header for the services
         printf("%s", center("DB"      ,  COL_DB   , WHITE, COL_SEP))                    ;
         printf("%s", center("Service" ,  COL_VER+1, WHITE, COL_SEP))                    ;
-        n=asort(nodes)                                                                  ;       # sort array nodes
+        n=asort(nodes)                                                                  ; # sort array nodes
 
         for (i = 1; i <= n; i++) {
             printf("%s", center(nodes[i], COL_NODE, WHITE, COL_SEP))                    ;
@@ -1166,13 +1155,13 @@ END {       #
             if (previous_db != to_print[1]) {                                             # Do not duplicate the DB names on the output
                 if (role[to_print[1]] == "PRIMARY") { COLOR_SVC = COLOR_PRIMARY} else {COLOR_SVC = COLOR_STANDBY}
 
-                printf(COLOR_BEGIN COLOR_SVC " %-"COL_DB-1"s" COLOR_END COL_SEP, to_print[1]);     # Database
+                printf(COLOR_BEGIN COLOR_SVC " %-"COL_DB-1"s" COLOR_END COL_SEP, to_print[1]); # Database
                 previous_db = to_print[1]                                               ;
             } else {
                 printf("%s", center("",  COL_DB, WHITE, COL_SEP))                       ;
             }
             if (tab_svc_type[service] == "PRIMARY") { COLOR_SVC = COLOR_PRIMARY} else {COLOR_SVC = COLOR_STANDBY}
-            printf(COLOR_BEGIN COLOR_SVC " %-"COL_VER"s" COLOR_END"|", service, WHITE)      ; # Service
+            printf(COLOR_BEGIN COLOR_SVC " %-"COL_VER"s" COLOR_END"|", service, WHITE)  ; # Service
 
             for (i = 1; i <= n; i++) {                                                    # For each node
                 dbstatus =           status[svc_sorted[j],nodes[i]]                     ;
@@ -1239,42 +1228,42 @@ END {       #
             oh_list[oh_list_sorted[j]]=j ;
         }
         # A header for the databases
-        printf("%s", center("DB"        , COL_DB, WHITE, COL_SEP))                       ;
-        printf("%s", center("Version"   , COL_VER+1, WHITE, COL_SEP))                    ;
-        n=asort(nodes)                                                                   ; # sort array nodes
+        printf("%s", center("DB"        , COL_DB, WHITE, COL_SEP))                      ;
+        printf("%s", center("Version"   , COL_VER+1, WHITE, COL_SEP))                   ;
+        n=asort(nodes)                                                                  ; # sort array nodes
         for (i = 1; i <= n; i++) {
-            printf("%s", center(nodes[i], COL_NODE, WHITE, COL_SEP))                     ;
+            printf("%s", center(nodes[i], COL_NODE, WHITE, COL_SEP))                    ;
         }
-        printf("%s", center("DB Type"   , COL_TYPE, WHITE, COL_SEP))                     ;
-        printf("\n")                                                                     ;
+        printf("%s", center("DB Type"   , COL_TYPE, WHITE, COL_SEP))                    ;
+        printf("\n")                                                                    ;
 
         # a "---" line under the header
-        print_a_line()                                                                   ;
+        print_a_line()                                                                  ;
 
         # Print the databases
-        m=asorti(version, version_sorted)                                                ;
+        m=asorti(version, version_sorted)                                               ;
         for (j = 1; j <= m; j++) {
-            l_db = version_sorted[j]                                                     ;     # more readable
+            l_db = version_sorted[j]                                                    ; # more readable
             if (role[l_db] == "PRIMARY") { COLOR_DB = COLOR_PRIMARY} else {COLOR_DB = COLOR_STANDBY}
-            printf(COLOR_BEGIN COLOR_DB "%-"COL_DB"s" COLOR_END"|", l_db)                ;     # Database
-            printf(COLOR_BEGIN WHITE " %-"COL_VER-6"s" COLOR_END, version[l_db], COL_VER);     # Version
-            printf(COLOR_BEGIN WHITE "%6s" COLOR_END"|"," ("oh_list[oh[l_db]] ") ")      ;     # OH id
+            printf(COLOR_BEGIN COLOR_DB "%-"COL_DB"s" COLOR_END"|", l_db)               ; # Database
+            printf(COLOR_BEGIN WHITE " %-"COL_VER-6"s" COLOR_END, version[l_db], COL_VER);# Version
+            printf(COLOR_BEGIN WHITE "%6s" COLOR_END"|"," ("oh_list[oh[l_db]] ") ")     ; # OH id
 
-            for (i = 1; i <= n; i++) {                                                     # For each node
-                l_node   = nodes[i]                                                      ;          # More readable
-                dbstatus =           status[l_db,l_node]                                 ;
-                dbtarget =           target[l_db,l_node]                                 ;
-                dbdetail =   status_details[l_db,l_node]                                 ;
-                set_color_status(l_db, l_node, dbstatus, dbtarget)                       ;
+            for (i = 1; i <= n; i++) {                                                    # For each node
+                l_node   = nodes[i]                                                     ; # More readable
+                dbstatus =           status[l_db,l_node]                                ;
+                dbtarget =           target[l_db,l_node]                                ;
+                dbdetail =   status_details[l_db,l_node]                                ;
+                set_color_status(l_db, l_node, dbstatus, dbtarget)                      ;
                 if ((is_enabled[l_db,l_node] == 0) && (is_enabled[l_db,l_node] != "")) { # Instance disabled
-                    INSTANCE_DISABLED = 1                                                ;
-                    right = int((COL_NODE - length(dbdetail)) / 2)                       ;
-                    left  = COL_NODE - length(dbdetail) - right                          ;
+                    INSTANCE_DISABLED = 1                                               ;
+                    right = int((COL_NODE - length(dbdetail)) / 2)                      ;
+                    left  = COL_NODE - length(dbdetail) - right                         ;
                     if (length(dbdetail) < COL_DB+4) {
-                        left--                                                           ;
+                        left--                                                          ;
                     }
                     if (dbdetail == "") {
-                        printf("%s", center(DISABLED, COL_NODE, RED, COL_SEP ))          ;
+                        printf("%s", center(DISABLED, COL_NODE, RED, COL_SEP ))         ;
                     } else if (dbdetail == "Open") {
                         printf("%"left"s%s %s%"right"s", "", in_color(nice_case(dbdetail), COL_ONLINE),   in_color(DISABLED, RED), COL_SEP);
                     } else if (dbdetail ~  /Readonly/) {
@@ -1297,36 +1286,36 @@ END {       #
             #
             if (role[l_db] == "PRIMARY") {
                 ROLE_COLOR=COLOR_PRIMARY
-                ROLE_SHORT=" (P)"                                                        ;
+                ROLE_SHORT=" (P)"                                                       ;
             } else {
                 ROLE_COLOR=COLOR_STANDBY
-                ROLE_SHORT=" (S)"                                                        ;
+                ROLE_SHORT=" (S)"                                                       ;
             }
-            printf("%s", center(dbtype[l_db] ROLE_SHORT, COL_TYPE, ROLE_COLOR, COL_SEP)) ;
-            printf("\n")                                                                 ;
+            printf("%s", center(dbtype[l_db] ROLE_SHORT, COL_TYPE, ROLE_COLOR, COL_SEP));
+            printf("\n")                                                                ;
             #
             # PDBs
             #
-            if (length(pdb[l_db]) > 0 && SHOW_PDB == "YES") {              # Only if there are PDBs
-                for (x in pdb[l_db]) {tempopdb[x]=x;} ;
-                z=asort(tempopdb,pdb_sorted) ;
-                for (p=1; p<=z; p++) {     # For each PDB
-                    l_pdb = pdb_sorted[p] ;
-                    l_dbpdb = l_db"."l_pdb ;
-                    printf(COLOR_BEGIN COLOR_DB "  %-"COL_DB-2"s" COLOR_END"|", l_pdb )      ;   # PDB
-                    printf(COLOR_BEGIN WHITE " %-"COL_VER"s" COLOR_END"|", "", COL_VER)      ;   # Version
-                    for (i = 1; i <= n; i++) {                                                   # For each node
-                        l_node    = nodes[i]                                                 ;   # More readable
-                        pdbstatus =           status[l_dbpdb,l_node]                         ;
-                        pdbtarget =           target[l_dbpdb,l_node]                         ;
-#                        pdbdetail =   status_details[l_dbdbp,l_node]                         ;
-                        set_color_status(l_dbpdb, l_node, pdbstatus, pdbtarget)              ;
+            if (length(pdb[l_db]) > 0 && SHOW_PDB == "YES") {                             # Only if there are PDBs
+                for (x in pdb[l_db]) {tempopdb[x]=x;}                                   ;
+                z=asort(tempopdb,pdb_sorted)                                            ;
+                for (p=1; p<=z; p++) {                                                    # For each PDB
+                    l_pdb = pdb_sorted[p]                                               ;
+                    l_dbpdb = l_db"."l_pdb                                              ;
+                    printf(COLOR_BEGIN COLOR_DB "  %-"COL_DB-2"s" COLOR_END"|", l_pdb ) ; # PDB
+                    printf(COLOR_BEGIN WHITE " %-"COL_VER"s" COLOR_END"|", "", COL_VER) ; # Version
+                    for (i = 1; i <= n; i++) {                                            # For each node
+                        l_node    = nodes[i]                                            ;  # More readable
+                        pdbstatus =           status[l_dbpdb,l_node]                    ;
+                        pdbtarget =           target[l_dbpdb,l_node]                    ;
+#                        pdbdetail =   status_details[l_dbdbp,l_node]                   ;
+                        set_color_status(l_dbpdb, l_node, pdbstatus, pdbtarget)         ;
                         if ((is_enabled[l_dbpdb,l_node] == 0) && (is_enabled[l_dbpdb,l_node] != "")) { # Instance disabled
-                            INSTANCE_DISABLED = 1                                             ;
-                            right = int((COL_NODE - length(pdbstatus)) / 2)                   ;
-                            left  = COL_NODE - length(pdbstatus) - right                      ;
+                            INSTANCE_DISABLED = 1                                       ;
+                            right = int((COL_NODE - length(pdbstatus)) / 2)             ;
+                            left  = COL_NODE - length(pdbstatus) - right                ;
                             if (length(pdbstatus) < COL_DB+4) {
-                                left--                                                        ;
+                                left--                                                  ;
                             }
                             if (tolower(pdbstatus) == "online"){
                                 printf("%"left"s%s %s%"right"s", "", in_color(nice_case(pdbstatus), COL_OPEN), in_color(DISABLED, RED), COL_SEP); } else {
@@ -1337,106 +1326,103 @@ END {       #
                                 printf("%s", center(nice_case(pdbstatus), COL_NODE, COL_OTHER, COL_SEP)) ; }
                         }
                     }
-                    printf("%s", center("PDB", COL_TYPE, ROLE_COLOR, COL_SEP)) ;
-                    printf("\n")                                                             ;
+                    printf("%s", center("PDB", COL_TYPE, ROLE_COLOR, COL_SEP))          ;
+                    printf("\n")                                                        ;
                 } # End for each PDB
                 delete tempopdb ;
              } # End of PDBs
         }
 
         # a "---" line as a footer
-        print_a_line()                                                                   ;
+        print_a_line()                                                                  ;
 
         # Print the OH list and a legend for the DB Type colors underneath the table
-        printf ("%s", "ORACLE_HOME references listed in the Version column ")            ;
+        printf ("%s", "ORACLE_HOME references listed in the Version column ")           ;
 
         if (oh_ref > 1) {
             printf ("(%s)", "\"" sprintf(COLOR_BEGIN TEAL "%s" COLOR_END, "\47\47") "\" means \"same as above\"") ;
         }
-        printf ("\n\n")                                                                  ;
+        printf ("\n\n")                                                                 ;
 
-        previous_group = ""                                                              ;
-        previous_owner = ""                                                              ;
+        previous_group = ""                                                             ;
+        previous_owner = ""                                                             ;
         if (COL_OWNER%2) { COL_OWNER++  }
-        if (COL_GROUP%2) { COL_GROUP++  }                                                ;
+        if (COL_GROUP%2) { COL_GROUP++  }                                               ;
         g_same_as_above=sprintf(COLOR_BEGIN TEAL "%"(COL_GROUP/2)-1"s%s" COLOR_END, "", "\47\47")                        ;
         o_same_as_above=sprintf(COLOR_BEGIN TEAL "%"(COL_OWNER/2)-1"s%s%"(COL_OWNER/2)-1"s" COLOR_END, "", "\47\47", "") ;
 
         # to ease the ORACLE_HOME sorting
         for (x in oh_list) {
-            to_print[oh_list[x]] = x                                                     ;
+            to_print[oh_list[x]] = x                                                    ;
         }
         for (i=1; i<=oh_ref; i++) {
             # to ease the naming
-            the_oh=to_print[i]                                                           ;
-             owner=o_list[to_print[i]]                                                   ;
-             group=g_list[to_print[i]]                                                   ;
+            the_oh=to_print[i]                                                          ;
+             owner=o_list[to_print[i]]                                                  ;
+             group=g_list[to_print[i]]                                                  ;
             if (group == previous_group) {
-                group_to_print = g_same_as_above                                         ;
+                group_to_print = g_same_as_above                                        ;
             } else {
-                group_to_print = group                                                   ;
+                group_to_print = group                                                  ;
             }
             if (owner == previous_owner) {
-                owner_to_print = o_same_as_above                                         ;
+                owner_to_print = o_same_as_above                                        ;
             } else {
-                owner_to_print = owner                                                   ;
+                owner_to_print = owner                                                  ;
             }
 
             printf("\t%2d : %-"COL_OH"s\t%-"COL_OWNER"s %s\n", i, the_oh, owner_to_print, group_to_print) ;
-            previous_group = group                                                       ;
-            previous_owner = owner                                                       ;
+            previous_group = group                                                      ;
+            previous_owner = owner                                                      ;
         }
     }
-    printf ("\n")                                                                        ;
-    print_legend_disabled(INSTANCE_DISABLED, "Instance")                                 ;
-    print_legend_recent_restarted()                                                      ;
-    print_legend_status_issue()                                                          ;
-} ' "${TMP}" | "${AWK}" -v GREP="${GREP}" -v UNGREP="${UNGREP}" ' BEGIN {FS="|"}                 # AWK used to grep and ungrep
+    printf ("\n")                                                                       ;
+    print_legend_disabled(INSTANCE_DISABLED, "Instance")                                ;
+    print_legend_recent_restarted()                                                     ;
+    print_legend_status_issue()                                                         ;
+} ' "${TMP}" | "${AWK}" -v GREP="${GREP}" -v UNGREP="${UNGREP}" ' BEGIN {FS="|"}          # AWK used to grep and ungrep
            {    if ((NF >= 3) && ($(NF-1) !~ /Type/) && ($2 !~ /Service/)) {
                     if (($0 ~ GREP) && ($0 !~ UNGREP)) {
-                        print $0                                                         ;
+                        print $0                                                        ;
                     }
                 } else {
-                   print  $0                                                             ;
+                   print  $0                                                            ;
                 }
-           }' | sed s'/^/  /'              > "${TMP2}"                      # We can reuse TMP2 here
-
+           }' | sed s'/^/  /' > "${TMP2}"                                                  # We can reuse TMP2 here
 #
 # Special sort order (option -c)
 #
-if [[ -n "${SORT_BY}" ]]; then                                              # Special sort order
-      SORT_COL="${SORT_BY:0:1}"                                             # First character
-     SORT_NODE="${SORT_BY:1:1}"                                             # Second character
-    SORT_ORDER="${SORT_BY: -1}"                                             # Last character
-
+if [[ -n "${SORT_BY}" ]]; then                                                             # Special sort order
+      SORT_COL="${SORT_BY:0:1}"                                                            # First character
+     SORT_NODE="${SORT_BY:1:1}"                                                            # Second character
+    SORT_ORDER="${SORT_BY: -1}"                                                            # Last character
     if [[ "${SORT_COL}" =~ [1-9] ]]; then
         SORT_NODE=${SORT_COL}
          SORT_COL="c"
     fi
-    if [[ "${SORT_ORDER}" != "r" ]]; then                                   # Sort order can only be "r" for reverse or "" for normal
-        SORT_ORDER=""
-    else    SORT_ORDER="r"
+    if [[ "${SORT_ORDER}" != "r" ]]; then                     i                            # Sort order can only be "r" for reverse or "" for normal
+         SORT_ORDER=""
+    else SORT_ORDER="r"
     fi
-    if [[ ! "${SORT_NODE}" =~ [1-9] ]]; then                                # Column or node number
-        SORT_NODE=1
+    if [[ ! "${SORT_NODE}" =~ [1-9] ]]; then                                               # Column or node number
+          SORT_NODE=1
     fi
-
     # Assign the column  number depending of what we want to sort by
      SORT_NUM=1
-    SORT_NUM2=2                                                             # Second column to sort by
-    SORT_NUM3=2                                                             # Third column to sort by
+    SORT_NUM2=2                                                                            # Second column to sort by
+    SORT_NUM3=2                                                                            # Third column to sort by
     case ${SORT_COL} in
     c)   if [[ "${SORT_NODE}" -gt "2" ]]; then
              SORT_NUM=$(((${SORT_NODE}*2)+2))
             SORT_NUM2=$((${SORT_NUM}-1))
          else    SORT_NUM=$(( ${SORT_NODE}*2   ))
-         fi                                                                                      ;;  # Sort by column number
-    d)   SORT_NUM=2                                                                              ;;  # Sort by DB name
-    v)   SORT_NUM=4                                                                              ;;  # Sort by version
-    s)    SORT_NUM=$(((${SORT_NODE}*2)+6))                                                        ;  # Sort by status (Shutdown, Open)
-         SORT_NUM2=$((${SORT_NUM}-1))                                                            ;;
+         fi                                                                             ;; # Sort by column number
+    d)   SORT_NUM=2                                                                     ;; # Sort by DB name
+    v)   SORT_NUM=4                                                                     ;; # Sort by version
+    s)    SORT_NUM=$(((${SORT_NODE}*2)+6))                                               ; # Sort by status (Shutdown, Open)
+         SORT_NUM2=$((${SORT_NUM}-1))                                                   ;;
     t)    TYPE_COL=`cat ${TMP2} | awk 'BEGIN {FS="|"}{if ($2 ~ "Version"){print (NF-1); exit}}'`  ;
-          SORT_NUM=$(((${TYPE_COL}*2)+1))                                                         ;; # Sort by Type
+          SORT_NUM=$(((${TYPE_COL}*2)+1))                                               ;; # Sort by Type
     esac
 
     SORT_K_1=" -k"${SORT_NUM}${SORT_ORDER}" "
@@ -1449,15 +1435,12 @@ if [[ -n "${SORT_BY}" ]]; then                                              # Sp
 
     cp "${TMP}" "${TMP2}"
 fi
-
 if [[ "$WITH_COLORS" == "YES" ]]; then
     cat "${TMP2}"
 else
-    cat "${TMP2}" | sed -r "s/\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]//g"      # Remove the colors
+    cat "${TMP2}" | sed -r "s/\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]//g"                   # Remove the colors
 fi
-
 printf "\n"
-
 if [[ -f "${TMP}" ]]; then
     if [[ -n "$OUT" ]]; then
         cp "${TMP}" "${OUT}"
@@ -1466,7 +1449,6 @@ if [[ -f "${TMP}" ]]; then
     rm -f "${TMP}"
 fi
 rm -f "${TMP2}"
-
 #*********************************************************************************************************
 #                               E N D     O F      S O U R C E
 #*********************************************************************************************************
