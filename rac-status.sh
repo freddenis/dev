@@ -15,7 +15,6 @@
 # 20210912 - Fred Denis - Implement new GI 21c PDB status; also -p to show/hide PDBs, default is we show the PDBs
 #                         STATE_DETAILS does not seem to be implemented (yet ?) for PDBs so the only info we have
 #                         is Online/Offline, we do not know if PDBs are READ WRITE or READ ONLY -- SEED not here either
-#                         Now relies on LAST_STATE_CHANGE and no more LAST_RESTART for color if something has changed recently
 # 20210908 - Fred Denis - Fixed a bad character next to cluster status with -u (no color) option
 # 20210825 - Fred Denis - Cluster upgrade status was causing an issue for HAS -- now fixed
 #                         There was some leftover color codes with -u option -- now fixed
@@ -903,7 +902,7 @@ function set_color_status(i_db, i_node, i_status, i_target) {
                 if (length(status[DB,SERVER]) > COL_NODE) { COL_NODE = length(status[DB,SERVER]) + COL_NODE_OFFSET;}
             }
             if ($1 == "TARGET")             {       target[DB,SERVER]=$2                    ;}
-            if ($1 == "LAST_STATE_CHANGE")  {       if (type == "PDB") { started[DBPDB,SERVER]=diff_hours($2" "$3);
+            if ($1 == "LAST_RESTART")       {       if (type == "PDB") { started[DBPDB,SERVER]=diff_hours($2" "$3);
                                                     } else             { started[DB,SERVER]=diff_hours($2" "$3)   ;}
                                             }
             if ($1 == "STATE_DETAILS")      {       NB++                                    ;  # Number of instances we came through
