@@ -1075,19 +1075,6 @@ END {       #
                 dbtarget =         target[l_lsnr,l_node]                                ;
                 dbdetail = status_details[l_lsnr,l_node]                                ;
                 set_color_status(l_lsnr, l_node, dbstatus, dbtarget)
-#                if ((started[l_lsnr,l_node] < DIFF_HOURS) && (started[l_lsnr,l_node])) {
-#                          COL_ONLINE=WITH_BACK                                         ;
-#                           COL_OTHER=WITH_BACK                                         ;
-#                    RECENT_RESTARTED=1                                                 ;
-#                } else {
-#                          COL_ONLINE=GREEN                                             ;
-#                           COL_OTHER=RED                                               ;
-#                }
-#                if (dbstatus != dbtarget) {
-#                          COL_ONLINE=WITH_BACK2                                        ;
-#                           COL_OTHER=WITH_BACK2                                        ;
-#                        STATUS_ISSUE=1                                                 ;
-#                }
                 if (is_enabled[l_lsnr,l_node] == 0) {                            # Listener disabled
                     LISTENER_DISABLED = 1                                               ;
                                 right = int((COL_NODE - length(dbstatus)) / 2)          ;
