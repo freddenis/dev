@@ -194,7 +194,7 @@ END
 
     printf "\n\033[1;37m%-8s\033[m\n" "SYNOPSIS"            ;
     cat << END
-        $0 [-a] [-n] [-d] [-l] [-s] [-t] [-g] [-v] [-D] [-S] [-c] [-o] [-f] [-e] [-L] [-r] [-u] [-k] [-K] [-w] [-h]
+        $0 [-a] [-n] [-d] [-p] [-l] [-s] [-t] [-g] [-v] [-D] [-S] [-c] [-o] [-f] [-e] [-L] [-r] [-u] [-k] [-K] [-w] [-h]
 END
 
     printf "\n\033[1;37m%-8s\033[m\n" "DESCRIPTION"         ;
